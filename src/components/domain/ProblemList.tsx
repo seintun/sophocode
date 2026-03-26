@@ -110,6 +110,7 @@ export default function ProblemList() {
             placeholder="Search problems..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
+            aria-label="Search problems"
           />
         </div>
         <Select
@@ -117,15 +118,24 @@ export default function ProblemList() {
           value={pattern}
           onChange={(v) => setPattern(v)}
           className="w-44"
+          aria-label="Filter by pattern"
         />
-        <Select options={SORT_OPTIONS} value={sortBy} onChange={setSortBy} className="w-36" />
+        <Select
+          options={SORT_OPTIONS}
+          value={sortBy}
+          onChange={setSortBy}
+          className="w-36"
+          aria-label="Sort problems"
+        />
       </div>
 
-      <div className="mb-6 flex gap-2">
+      <div className="mb-6 flex gap-2" role="group" aria-label="Filter by difficulty">
         {DIFFICULTIES.map((d) => (
           <button
             key={d}
             onClick={() => setDifficultyFilter(difficultyFilter === d ? '' : d)}
+            aria-pressed={difficultyFilter === d}
+            aria-label={`Filter by ${d.toLowerCase()} difficulty`}
             className="cursor-pointer rounded-full transition-opacity"
             style={{ opacity: difficultyFilter === d || !difficultyFilter ? 1 : 0.4 }}
           >
@@ -151,9 +161,20 @@ export default function ProblemList() {
           </Button>
         </div>
       ) : sorted.length === 0 ? (
-        <p className="py-12 text-center text-[var(--color-text-muted)]">
-          No problems match your filters.
-        </p>
+        <div className="flex flex-col items-center justify-center py-12 text-center">
+          <p className="mb-4 text-[var(--color-text-muted)]">No problems match your filters.</p>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => {
+              setSearch('');
+              setPattern('');
+              setDifficultyFilter('');
+            }}
+          >
+            Clear filters
+          </Button>
+        </div>
       ) : (
         <div className="space-y-2">
           {sorted.map((problem) => (

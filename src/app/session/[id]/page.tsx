@@ -9,8 +9,11 @@ import { CodeEditor } from '@/components/domain/CodeEditor';
 import { TestResults } from '@/components/domain/TestResults';
 import { CoachingPanel } from '@/components/domain/CoachingPanel';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { AIBanner } from '@/components/ui/AIBanner';
+import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 import { useAIChat } from '@/hooks/useAIChat';
 import { useCodeExecution } from '@/hooks/useCodeExecution';
+import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { Button } from '@/components/ui/Button';
 import type { SessionMode } from '@/generated/prisma/enums';
 
@@ -68,6 +71,8 @@ export default function SessionPage() {
   const [hintLevel, setHintLevel] = useState(0);
   const [showFailureButton, setShowFailureButton] = useState(false);
   const [completing, setCompleting] = useState(false);
+  const [pyodideReady, setPyodideReady] = useState(false);
+  const [pyodideLoading, setPyodideLoading] = useState(false);
 
   const { run: runTests, results: testRunResults, isRunning } = useCodeExecution();
 
@@ -151,12 +156,19 @@ export default function SessionPage() {
 
   const handleRunTests = useCallback(async () => {
     if (!session) return;
+
+    if (!pyodideReady) {
+      setPyodideLoading(true);
+      setPyodideReady(true);
+    }
+
     const testCases = session.problem.testCases.map((tc) => ({
       input: tc.input,
       expected: tc.expected,
       isHidden: tc.isHidden,
     }));
     await runTests(code, testCases);
+    setPyodideLoading(false);
     setShowFailureButton(true);
 
     // Save test run results
@@ -177,7 +189,7 @@ export default function SessionPage() {
         // Non-critical
       }
     }
-  }, [session, code, runTests, sessionId, testRunResults]);
+  }, [session, code, runTests, sessionId, testRunResults, pyodideReady]);
 
   const handleAskAboutFailure = useCallback(
     (failedSummary: string) => {
@@ -185,6 +197,13 @@ export default function SessionPage() {
     },
     [askAboutFailure],
   );
+
+  const canGetHint = hintLevel < 3;
+
+  useKeyboardShortcuts({
+    onRunTests: session ? handleRunTests : undefined,
+    onGetHint: canGetHint ? () => handleHintRequest(Math.min(hintLevel + 1, 3)) : undefined,
+  });
 
   const handleEndSession = async () => {
     setCompleting(true);
@@ -226,6 +245,19 @@ export default function SessionPage() {
           <div className="p-4">
             <Skeleton className="mb-4 h-8 w-1/2" />
             <Skeleton className="h-full w-full" />
+          </div>
+        </div>
+        {/* Mobile skeleton */}
+        <div className="flex h-full flex-col md:hidden">
+          <div className="flex border-b border-[var(--color-border)] bg-[var(--color-bg-secondary)]">
+            <Skeleton className="mx-1 my-2 h-8 flex-1" />
+            <Skeleton className="mx-1 my-2 h-8 flex-1" />
+            <Skeleton className="mx-1 my-2 h-8 flex-1" />
+          </div>
+          <div className="flex-1 p-4">
+            <Skeleton className="mb-4 h-8 w-3/4" />
+            <Skeleton className="mb-2 h-4 w-full" />
+            <Skeleton className="h-4 w-2/3" />
           </div>
         </div>
       </div>
@@ -270,71 +302,92 @@ export default function SessionPage() {
 
   return (
     <div className="flex h-[calc(100vh-57px)] flex-col">
+      <AIBanner />
       <div className="flex items-center justify-between border-b border-[var(--color-border)] bg-[var(--color-bg-secondary)] px-4 py-2">
         <span className="text-sm font-medium text-[var(--color-text-primary)]">
           {session.problem.title}
         </span>
-        <Button variant="secondary" size="sm" onClick={handleEndSession} disabled={completing}>
-          {completing ? 'Ending...' : 'End Session'}
-        </Button>
+        <div className="flex items-center gap-3">
+          <span className="hidden text-xs text-[var(--color-text-muted)] md:inline">
+            Ctrl+Enter to run, Ctrl+H for hint
+          </span>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={handleEndSession}
+            disabled={completing}
+            aria-label="End current session"
+          >
+            {completing ? 'Ending...' : 'End Session'}
+          </Button>
+        </div>
       </div>
       <div className="flex-1 min-h-0">
-        <SessionLayout
-          problem={
-            <ProblemPanel
-              problem={{
-                title: session.problem.title,
-                statement: session.problem.statement,
-                examples,
-                constraints: session.problem.constraints,
-                pattern: session.problem.pattern,
-                difficulty: session.problem.difficulty,
-              }}
-              notes={notes}
-              onNotesChange={setNotes}
-              mode={session.mode}
-              explanationStream={explanationStream}
-              getExplanation={getExplanation}
-            />
-          }
-          editor={
-            <div className="flex h-full flex-col">
-              <div className="flex items-center gap-2 border-b border-[var(--color-border)] px-4 py-2">
-                <button
-                  onClick={handleRunTests}
-                  disabled={isRunning}
-                  className="rounded-lg bg-[var(--color-accent)] px-4 py-1.5 text-sm font-medium text-[var(--color-bg-primary)] transition-colors hover:bg-[var(--color-accent-hover)] disabled:opacity-50"
-                >
-                  {isRunning ? 'Running...' : 'Run Tests'}
-                </button>
+        <ErrorBoundary>
+          <SessionLayout
+            problem={
+              <ProblemPanel
+                problem={{
+                  title: session.problem.title,
+                  statement: session.problem.statement,
+                  examples,
+                  constraints: session.problem.constraints,
+                  pattern: session.problem.pattern,
+                  difficulty: session.problem.difficulty,
+                }}
+                notes={notes}
+                onNotesChange={setNotes}
+                mode={session.mode}
+                explanationStream={explanationStream}
+                getExplanation={getExplanation}
+              />
+            }
+            editor={
+              <div className="flex h-full flex-col">
+                <div className="flex items-center gap-2 border-b border-[var(--color-border)] px-4 py-2">
+                  <button
+                    onClick={handleRunTests}
+                    disabled={isRunning}
+                    aria-label="Run tests (Ctrl+Enter)"
+                    className="rounded-lg bg-[var(--color-accent)] px-4 py-1.5 text-sm font-medium text-[var(--color-bg-primary)] transition-colors hover:bg-[var(--color-accent-hover)] disabled:opacity-50"
+                  >
+                    {isRunning ? 'Running...' : 'Run Tests'}
+                  </button>
+                  {pyodideLoading && (
+                    <span className="flex items-center gap-2 text-xs text-[var(--color-text-muted)]">
+                      <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-[var(--color-accent)] border-t-transparent" />
+                      Preparing Python environment...
+                    </span>
+                  )}
+                </div>
+                <div className="flex-1 min-h-0">
+                  <CodeEditor value={code} onChange={handleCodeChange} />
+                </div>
               </div>
-              <div className="flex-1 min-h-0">
-                <CodeEditor value={code} onChange={handleCodeChange} />
-              </div>
-            </div>
-          }
-          testResults={
-            <TestResults
-              results={displayResults}
-              passedCount={passedCount}
-              totalCount={totalCount}
-              onAskAboutFailure={hasFailures ? handleAskAboutFailure : undefined}
-            />
-          }
-          coach={
-            <CoachingPanel
-              mode={session.mode}
-              messages={messages}
-              onSendMessage={sendChat}
-              isLoading={aiLoading || hintStream.isLoading}
-              hintStream={hintStream}
-              onHintRequest={handleHintRequest}
-              hintLevel={hintLevel}
-              onAskAboutFailure={hasFailures ? () => handleAskAboutFailure('') : undefined}
-              showFailureButton={hasFailures}
-            />
-          }
-        />
+            }
+            testResults={
+              <TestResults
+                results={displayResults}
+                passedCount={passedCount}
+                totalCount={totalCount}
+                onAskAboutFailure={hasFailures ? handleAskAboutFailure : undefined}
+              />
+            }
+            coach={
+              <CoachingPanel
+                mode={session.mode}
+                messages={messages}
+                onSendMessage={sendChat}
+                isLoading={aiLoading || hintStream.isLoading}
+                hintStream={hintStream}
+                onHintRequest={handleHintRequest}
+                hintLevel={hintLevel}
+                onAskAboutFailure={hasFailures ? () => handleAskAboutFailure('') : undefined}
+                showFailureButton={hasFailures}
+              />
+            }
+          />
+        </ErrorBoundary>
       </div>
     </div>
   );

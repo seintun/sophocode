@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 import { PatternHeatmap } from '@/components/domain/PatternHeatmap';
 import { useGuestId } from '@/hooks/useGuestId';
 import type { Pattern, MasteryState } from '@/generated/prisma/enums';
@@ -78,120 +79,122 @@ export default function ProgressPage() {
     <div className="mx-auto max-w-5xl px-4 py-8">
       <h1 className="mb-6 text-2xl font-bold text-[var(--color-text-primary)]">Progress</h1>
 
-      {loading ? (
-        <ProgressSkeleton />
-      ) : !data ? (
-        <EmptyProgress />
-      ) : (
-        <div className="space-y-8">
-          <section>
-            <h2 className="mb-3 text-lg font-semibold text-[var(--color-text-primary)]">
-              Pattern Mastery
-            </h2>
-            <PatternHeatmap stats={data.patternStats} />
-          </section>
-
-          {data.needsRefresh.length > 0 && (
+      <ErrorBoundary>
+        {loading ? (
+          <ProgressSkeleton />
+        ) : !data ? (
+          <EmptyProgress />
+        ) : (
+          <div className="space-y-8">
             <section>
               <h2 className="mb-3 text-lg font-semibold text-[var(--color-text-primary)]">
-                Retest Today
+                Pattern Mastery
               </h2>
-              <div className="space-y-2">
-                {data.needsRefresh.map((item) => (
-                  <Card key={item.problem.id}>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <Link
-                          href={`/practice/${item.problem.slug}`}
-                          className="text-sm font-medium text-[var(--color-text-primary)] hover:text-[var(--color-accent)]"
-                        >
-                          {item.problem.title}
-                        </Link>
-                        <div className="mt-1 flex items-center gap-2">
-                          <Badge
-                            variant="difficulty"
-                            level={
-                              item.problem.difficulty === 'EASY'
-                                ? 'Easy'
-                                : item.problem.difficulty === 'MEDIUM'
-                                  ? 'Medium'
-                                  : 'Hard'
-                            }
-                          />
-                          <Badge
-                            variant="pattern"
-                            label={item.problem.pattern.replace(/_/g, ' ')}
-                          />
-                        </div>
-                      </div>
-                      <Link href={`/practice/${item.problem.slug}`}>
-                        <Button size="sm" variant="secondary">
-                          Retest
-                        </Button>
-                      </Link>
-                    </div>
-                  </Card>
-                ))}
-              </div>
+              <PatternHeatmap stats={data.patternStats} />
             </section>
-          )}
 
-          {data.problemHistory.length > 0 && (
-            <section>
-              <h2 className="mb-3 text-lg font-semibold text-[var(--color-text-primary)]">
-                Problem History
-              </h2>
-              <Card className="overflow-x-auto">
-                <table className="w-full text-left text-sm">
-                  <thead>
-                    <tr className="border-b border-[var(--color-border)] text-xs text-[var(--color-text-muted)]">
-                      <th className="pb-2 pr-4 font-medium">Problem</th>
-                      <th className="pb-2 pr-4 font-medium">Pattern</th>
-                      <th className="pb-2 pr-4 font-medium">Mastery</th>
-                      <th className="pb-2 pr-4 font-medium">Attempts</th>
-                      <th className="pb-2 font-medium">Last Attempt</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.problemHistory.map((item) => (
-                      <tr
-                        key={item.problem.id}
-                        className="border-b border-[var(--color-border-subtle)] last:border-0"
-                      >
-                        <td className="py-2 pr-4">
+            {data.needsRefresh.length > 0 && (
+              <section>
+                <h2 className="mb-3 text-lg font-semibold text-[var(--color-text-primary)]">
+                  Retest Today
+                </h2>
+                <div className="space-y-2">
+                  {data.needsRefresh.map((item) => (
+                    <Card key={item.problem.id}>
+                      <div className="flex items-center justify-between">
+                        <div>
                           <Link
                             href={`/practice/${item.problem.slug}`}
-                            className="text-[var(--color-text-primary)] hover:text-[var(--color-accent)]"
+                            className="text-sm font-medium text-[var(--color-text-primary)] hover:text-[var(--color-accent)]"
                           >
                             {item.problem.title}
                           </Link>
-                        </td>
-                        <td className="py-2 pr-4">
-                          <Badge
-                            variant="pattern"
-                            label={item.problem.pattern.replace(/_/g, ' ')}
-                          />
-                        </td>
-                        <td className="py-2 pr-4">
-                          <Badge variant="mastery" state={item.mastery} />
-                        </td>
-                        <td className="py-2 pr-4 text-[var(--color-text-secondary)]">
-                          {item.solveCount}/{item.attemptCount} solved
-                        </td>
-                        <td className="py-2 text-[var(--color-text-muted)]">
-                          {item.lastAttemptedAt
-                            ? new Date(item.lastAttemptedAt).toLocaleDateString()
-                            : '-'}
-                        </td>
+                          <div className="mt-1 flex items-center gap-2">
+                            <Badge
+                              variant="difficulty"
+                              level={
+                                item.problem.difficulty === 'EASY'
+                                  ? 'Easy'
+                                  : item.problem.difficulty === 'MEDIUM'
+                                    ? 'Medium'
+                                    : 'Hard'
+                              }
+                            />
+                            <Badge
+                              variant="pattern"
+                              label={item.problem.pattern.replace(/_/g, ' ')}
+                            />
+                          </div>
+                        </div>
+                        <Link href={`/practice/${item.problem.slug}`}>
+                          <Button size="sm" variant="secondary">
+                            Retest
+                          </Button>
+                        </Link>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {data.problemHistory.length > 0 && (
+              <section>
+                <h2 className="mb-3 text-lg font-semibold text-[var(--color-text-primary)]">
+                  Problem History
+                </h2>
+                <Card className="overflow-x-auto">
+                  <table className="w-full text-left text-sm">
+                    <thead>
+                      <tr className="border-b border-[var(--color-border)] text-xs text-[var(--color-text-muted)]">
+                        <th className="pb-2 pr-4 font-medium">Problem</th>
+                        <th className="pb-2 pr-4 font-medium">Pattern</th>
+                        <th className="pb-2 pr-4 font-medium">Mastery</th>
+                        <th className="pb-2 pr-4 font-medium">Attempts</th>
+                        <th className="pb-2 font-medium">Last Attempt</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </Card>
-            </section>
-          )}
-        </div>
-      )}
+                    </thead>
+                    <tbody>
+                      {data.problemHistory.map((item) => (
+                        <tr
+                          key={item.problem.id}
+                          className="border-b border-[var(--color-border-subtle)] last:border-0"
+                        >
+                          <td className="py-2 pr-4">
+                            <Link
+                              href={`/practice/${item.problem.slug}`}
+                              className="text-[var(--color-text-primary)] hover:text-[var(--color-accent)]"
+                            >
+                              {item.problem.title}
+                            </Link>
+                          </td>
+                          <td className="py-2 pr-4">
+                            <Badge
+                              variant="pattern"
+                              label={item.problem.pattern.replace(/_/g, ' ')}
+                            />
+                          </td>
+                          <td className="py-2 pr-4">
+                            <Badge variant="mastery" state={item.mastery} />
+                          </td>
+                          <td className="py-2 pr-4 text-[var(--color-text-secondary)]">
+                            {item.solveCount}/{item.attemptCount} solved
+                          </td>
+                          <td className="py-2 text-[var(--color-text-muted)]">
+                            {item.lastAttemptedAt
+                              ? new Date(item.lastAttemptedAt).toLocaleDateString()
+                              : '-'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </Card>
+              </section>
+            )}
+          </div>
+        )}
+      </ErrorBoundary>
     </div>
   );
 }
