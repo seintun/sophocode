@@ -15,12 +15,34 @@ interface TestResultsProps {
   results: TestResult[];
   passedCount: number;
   totalCount: number;
+  onAskAboutFailure?: (failedSummary: string) => void;
 }
 
-export function TestResults({ results, passedCount, totalCount }: TestResultsProps) {
+export function TestResults({
+  results,
+  passedCount,
+  totalCount,
+  onAskAboutFailure,
+}: TestResultsProps) {
   const visibleResults = results.filter((r) => !r.isHidden);
   const hiddenResults = results.filter((r) => r.isHidden);
   const hiddenPassed = hiddenResults.filter((r) => r.passed).length;
+  const hasFailures = passedCount < totalCount;
+
+  const handleAskAboutFailure = () => {
+    if (!onAskAboutFailure) return;
+
+    const failedTests = results
+      .filter((r) => !r.passed)
+      .map((r) => {
+        if (r.error) return `Error: ${r.error}`;
+        if (r.isHidden) return `Hidden test failed`;
+        return `Input: ${r.input}\nExpected: ${r.expected}\nActual: ${r.actual}`;
+      })
+      .join('\n---\n');
+
+    onAskAboutFailure(failedTests);
+  };
 
   return (
     <div className="flex h-full flex-col">
@@ -36,7 +58,15 @@ export function TestResults({ results, passedCount, totalCount }: TestResultsPro
         >
           {passedCount}/{totalCount} tests passed
         </span>
-        {passedCount < totalCount && (
+        {hasFailures && onAskAboutFailure && (
+          <button
+            onClick={handleAskAboutFailure}
+            className="text-xs text-[var(--color-ai-coach)] underline decoration-dotted hover:text-[var(--color-ai-coach)]/80"
+          >
+            Why did this fail?
+          </button>
+        )}
+        {hasFailures && !onAskAboutFailure && (
           <button
             disabled
             className="text-xs text-[var(--color-text-muted)] underline decoration-dotted"
@@ -58,9 +88,9 @@ export function TestResults({ results, passedCount, totalCount }: TestResultsPro
           <div key={i} className="border-b border-[var(--color-border-subtle)] px-4 py-3">
             <div className="mb-2 flex items-center gap-2">
               {result.passed ? (
-                <span className="text-[var(--color-success)]">✓</span>
+                <span className="text-[var(--color-success)]">&#10003;</span>
               ) : (
-                <span className="text-[var(--color-error)]">✗</span>
+                <span className="text-[var(--color-error)]">&#10007;</span>
               )}
               <span className="text-xs font-medium text-[var(--color-text-muted)]">
                 Test {i + 1}
@@ -96,9 +126,9 @@ export function TestResults({ results, passedCount, totalCount }: TestResultsPro
           <div className="border-b border-[var(--color-border-subtle)] px-4 py-3">
             <div className="flex items-center gap-2">
               {hiddenPassed === hiddenResults.length ? (
-                <span className="text-[var(--color-success)]">✓</span>
+                <span className="text-[var(--color-success)]">&#10003;</span>
               ) : (
-                <span className="text-[var(--color-warning)]">⚠</span>
+                <span className="text-[var(--color-warning)]">&#9888;</span>
               )}
               <span className="text-sm text-[var(--color-text-secondary)]">
                 {hiddenPassed}/{hiddenResults.length} hidden tests passed

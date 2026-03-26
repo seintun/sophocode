@@ -1,5 +1,3 @@
-/* eslint-disable no-restricted-globals */
-
 let pyodide = null;
 let loading = false;
 
@@ -24,7 +22,7 @@ async function loadPyodideInstance() {
   }
 }
 
-function runTestCase(py, code, input, isHidden) {
+function runTestCase(py, code, input) {
   const setup = `
 import sys, io
 
@@ -101,7 +99,7 @@ self.onmessage = async function (event) {
           continue;
         }
 
-        const { actual, error } = runTestCase(py, code, tc.input, tc.isHidden);
+        const { actual, error } = runTestCase(py, code, tc.input);
 
         if (timedOut) {
           results.push({

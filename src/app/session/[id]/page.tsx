@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { SessionLayout } from '@/components/domain/SessionLayout';
@@ -9,6 +9,8 @@ import { CodeEditor } from '@/components/domain/CodeEditor';
 import { TestResults } from '@/components/domain/TestResults';
 import { CoachingPanel } from '@/components/domain/CoachingPanel';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { useAIChat } from '@/hooks/useAIChat';
+import { useCodeExecution } from '@/hooks/useCodeExecution';
 import type { SessionMode } from '@/generated/prisma/enums';
 
 interface TestCase {
@@ -30,6 +32,8 @@ interface SessionData {
     id: string;
     title: string;
     statement: string;
+    pattern: string;
+    difficulty: string;
     examples: unknown[];
     constraints: string[];
     starterCode: string;
@@ -60,6 +64,9 @@ export default function SessionPage() {
   const [code, setCode] = useState('');
   const [notes, setNotes] = useState('');
   const [hintLevel, setHintLevel] = useState(0);
+  const [showFailureButton, setShowFailureButton] = useState(false);
+
+  const { run: runTests, results: testRunResults, isRunning } = useCodeExecution();
 
   useEffect(() => {
     async function fetchSession() {
@@ -81,23 +88,100 @@ export default function SessionPage() {
     fetchSession();
   }, [sessionId]);
 
-  const handleCodeChange = async (newCode: string) => {
-    setCode(newCode);
-    try {
-      await fetch(`/api/sessions/${sessionId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: newCode }),
-      });
-    } catch {
-      // Auto-save failure is non-critical
-    }
-  };
+  const problemContext = session
+    ? {
+        title: session.problem.title,
+        statement: session.problem.statement,
+        pattern: session.problem.pattern,
+        difficulty: session.problem.difficulty,
+      }
+    : { title: '', statement: '', pattern: '', difficulty: '' };
 
-  const handleHintRequest = (level: number) => {
-    setHintLevel(level);
-    // Hint AI integration wired in Phase 4
-  };
+  const {
+    messages,
+    sendChat,
+    isLoading: aiLoading,
+    hintStream,
+    getHint,
+    explanationStream,
+    getExplanation,
+    askAboutFailure,
+  } = useAIChat({
+    mode: session?.mode ?? 'SELF_PRACTICE',
+    problem: problemContext,
+    currentCode: code,
+    testResults: testRunResults
+      ? { passed: testRunResults.passed, total: testRunResults.total }
+      : undefined,
+  });
+
+  const handleCodeChange = useCallback(
+    async (newCode: string) => {
+      setCode(newCode);
+      try {
+        await fetch(`/api/sessions/${sessionId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code: newCode }),
+        });
+      } catch {
+        // Auto-save failure is non-critical
+      }
+    },
+    [sessionId],
+  );
+
+  const handleHintRequest = useCallback(
+    async (level: number) => {
+      setHintLevel(level);
+      const hintContent = await getHint(level);
+      if (hintContent) {
+        await fetch(`/api/sessions/${sessionId}/hints`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ level, content: hintContent }),
+        });
+      }
+    },
+    [getHint, sessionId],
+  );
+
+  const handleRunTests = useCallback(async () => {
+    if (!session) return;
+    const testCases = session.problem.testCases.map((tc) => ({
+      input: tc.input,
+      expected: tc.expected,
+      isHidden: tc.isHidden,
+    }));
+    await runTests(code, testCases);
+    setShowFailureButton(true);
+
+    // Save test run results
+    if (testRunResults) {
+      try {
+        await fetch('/api/runs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sessionId,
+            code,
+            results: testRunResults.results,
+            passed: testRunResults.passed,
+            total: testRunResults.total,
+          }),
+        });
+      } catch {
+        // Non-critical
+      }
+    }
+  }, [session, code, runTests, sessionId, testRunResults]);
+
+  const handleAskAboutFailure = useCallback(
+    (failedSummary: string) => {
+      askAboutFailure(failedSummary);
+    },
+    [askAboutFailure],
+  );
 
   if (loading) {
     return (
@@ -140,8 +224,9 @@ export default function SessionPage() {
     explanation?: string;
   }>;
 
-  const testResults =
-    session.runs.length > 0
+  const displayResults = testRunResults
+    ? testRunResults.results.map((r) => ({ ...r, isHidden: r.input === '' && r.expected === '' }))
+    : session.runs.length > 0
       ? (session.runs[0].results as Array<{
           input: string;
           expected: string;
@@ -151,6 +236,10 @@ export default function SessionPage() {
           isHidden: boolean;
         }>)
       : [];
+
+  const passedCount = testRunResults?.passed ?? session.runs[0]?.passed ?? 0;
+  const totalCount = testRunResults?.total ?? session.runs[0]?.total ?? 0;
+  const hasFailures = showFailureButton && passedCount < totalCount;
 
   return (
     <div className="h-[calc(100vh-57px)]">
@@ -162,24 +251,51 @@ export default function SessionPage() {
               statement: session.problem.statement,
               examples,
               constraints: session.problem.constraints,
+              pattern: session.problem.pattern,
+              difficulty: session.problem.difficulty,
             }}
             notes={notes}
             onNotesChange={setNotes}
+            mode={session.mode}
+            explanationStream={explanationStream}
+            getExplanation={getExplanation}
           />
         }
-        editor={<CodeEditor value={code} onChange={handleCodeChange} />}
+        editor={
+          <div className="flex h-full flex-col">
+            <div className="flex items-center gap-2 border-b border-[var(--color-border)] px-4 py-2">
+              <button
+                onClick={handleRunTests}
+                disabled={isRunning}
+                className="rounded-lg bg-[var(--color-accent)] px-4 py-1.5 text-sm font-medium text-[var(--color-bg-primary)] transition-colors hover:bg-[var(--color-accent-hover)] disabled:opacity-50"
+              >
+                {isRunning ? 'Running...' : 'Run Tests'}
+              </button>
+            </div>
+            <div className="flex-1 min-h-0">
+              <CodeEditor value={code} onChange={handleCodeChange} />
+            </div>
+          </div>
+        }
         testResults={
           <TestResults
-            results={testResults}
-            passedCount={session.runs[0]?.passed ?? 0}
-            totalCount={session.runs[0]?.total ?? 0}
+            results={displayResults}
+            passedCount={passedCount}
+            totalCount={totalCount}
+            onAskAboutFailure={hasFailures ? handleAskAboutFailure : undefined}
           />
         }
         coach={
           <CoachingPanel
             mode={session.mode}
+            messages={messages}
+            onSendMessage={sendChat}
+            isLoading={aiLoading || hintStream.isLoading}
+            hintStream={hintStream}
             onHintRequest={handleHintRequest}
             hintLevel={hintLevel}
+            onAskAboutFailure={hasFailures ? () => handleAskAboutFailure('') : undefined}
+            showFailureButton={hasFailures}
           />
         }
       />

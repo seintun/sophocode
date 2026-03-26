@@ -27,6 +27,7 @@
   },
   "dependencies": {
     "@ai-sdk/openai": "^3.0.48",
+    "@ai-sdk/react": "^3.0.140",
     "@monaco-editor/react": "^4.7.0",
     "@prisma/adapter-pg": "^7.5.0",
     "@prisma/client": "^7.5.0",

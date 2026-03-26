@@ -1,20 +1,21 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
 import type { SessionMode } from '@/generated/prisma/enums';
-
-interface Message {
-  id: string;
-  role: 'user' | 'assistant';
-  content: string;
-}
+import type { UIMessage } from 'ai';
 
 interface CoachingPanelProps {
   mode: SessionMode;
+  messages: UIMessage[];
+  onSendMessage: (message: string) => void;
+  isLoading: boolean;
+  hintStream: { text: string; isLoading: boolean };
   onHintRequest: (level: number) => void;
   hintLevel: number;
+  onAskAboutFailure?: () => void;
+  showFailureButton?: boolean;
 }
 
 const modeLabels: Record<SessionMode, string> = {
@@ -23,8 +24,51 @@ const modeLabels: Record<SessionMode, string> = {
   MOCK_INTERVIEW: 'Mock Interview',
 };
 
-export function CoachingPanel({ mode, onHintRequest, hintLevel }: CoachingPanelProps) {
-  const [messages] = useState<Message[]>([]);
+function extractTextFromMessage(msg: UIMessage): string {
+  if (!msg.parts) return '';
+  return msg.parts
+    .filter((p) => p.type === 'text')
+    .map((p) => (p as { type: 'text'; text: string }).text)
+    .join('');
+}
+
+export function CoachingPanel({
+  mode,
+  messages,
+  onSendMessage,
+  isLoading,
+  hintStream,
+  onHintRequest,
+  hintLevel,
+  onAskAboutFailure,
+  showFailureButton,
+}: CoachingPanelProps) {
+  const [input, setInput] = useState('');
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const canChat = mode === 'COACH_ME' || mode === 'MOCK_INTERVIEW';
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, hintStream.text]);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!input.trim() || isLoading) return;
+    onSendMessage(input.trim());
+    setInput('');
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSubmit(e);
+    }
+  };
+
+  const nextHintLevel = Math.min(hintLevel + 1, 3);
+  const canGetHint = hintLevel < 3;
 
   return (
     <div className="flex h-full flex-col">
@@ -38,58 +82,131 @@ export function CoachingPanel({ mode, onHintRequest, hintLevel }: CoachingPanelP
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4">
-        {messages.length === 0 ? (
+        {messages.length === 0 && !hintStream.text ? (
           <div className="flex h-full flex-col items-center justify-center gap-4 text-center">
-            <p className="text-sm text-[var(--color-text-muted)]">AI coaching will appear here</p>
+            <p className="text-sm text-[var(--color-text-muted)]">
+              {mode === 'SELF_PRACTICE'
+                ? 'Get hints as you work through the problem'
+                : mode === 'COACH_ME'
+                  ? 'Ask me anything about this problem'
+                  : 'I will guide you through the interview process'}
+            </p>
             <Button
               variant="secondary"
               size="sm"
-              onClick={() => onHintRequest(hintLevel + 1)}
-              disabled={hintLevel >= 3}
+              onClick={() => onHintRequest(nextHintLevel)}
+              disabled={!canGetHint || hintStream.isLoading}
             >
-              Get Hint (Level {hintLevel >= 3 ? '3 (max)' : hintLevel + 1})
+              {hintStream.isLoading ? 'Getting hint...' : `Get Hint (Level ${nextHintLevel})`}
             </Button>
           </div>
         ) : (
           <div className="space-y-3">
-            {messages.map((msg) => (
-              <div
-                key={msg.id}
-                className={cn(
-                  'rounded-lg px-3 py-2 text-sm',
-                  msg.role === 'assistant'
-                    ? 'bg-[var(--color-ai-coach)]/10 text-[var(--color-text-primary)]'
-                    : 'bg-[var(--color-bg-elevated)] text-[var(--color-text-primary)]',
-                )}
-              >
-                {msg.content}
+            {/* Chat messages */}
+            {messages.map((msg) => {
+              const text = extractTextFromMessage(msg);
+              if (!text) return null;
+              return (
+                <div
+                  key={msg.id}
+                  className={cn(
+                    'rounded-lg px-3 py-2 text-sm',
+                    msg.role === 'assistant'
+                      ? 'bg-[var(--color-ai-coach)]/10 text-[var(--color-text-primary)]'
+                      : 'bg-[var(--color-bg-elevated)] text-[var(--color-text-primary)]',
+                  )}
+                >
+                  <div className="mb-1 text-xs font-medium text-[var(--color-text-muted)]">
+                    {msg.role === 'assistant' ? 'Coach' : 'You'}
+                  </div>
+                  <div className="whitespace-pre-wrap">{text}</div>
+                </div>
+              );
+            })}
+
+            {/* Hint stream */}
+            {hintStream.text && (
+              <div className="rounded-lg bg-[var(--color-ai-coach)]/10 px-3 py-2 text-sm text-[var(--color-text-primary)]">
+                <div className="mb-1 text-xs font-medium text-[var(--color-ai-coach)]">
+                  Hint (Level {hintLevel})
+                </div>
+                <div className="whitespace-pre-wrap">
+                  {hintStream.text}
+                  {hintStream.isLoading && (
+                    <span className="ml-1 inline-block h-3 w-3 animate-pulse rounded-full bg-[var(--color-ai-coach)]" />
+                  )}
+                </div>
               </div>
-            ))}
-            <div className="flex justify-center">
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => onHintRequest(hintLevel + 1)}
-                disabled={hintLevel >= 3}
-              >
-                Get Hint (Level {hintLevel >= 3 ? '3 (max)' : hintLevel + 1})
-              </Button>
+            )}
+
+            {/* Loading indicator for chat */}
+            {isLoading && !hintStream.isLoading && (
+              <div className="flex items-center gap-2 text-sm text-[var(--color-text-muted)]">
+                <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-[var(--color-ai-coach)] border-t-transparent" />
+                Coach is thinking...
+              </div>
+            )}
+
+            {/* Action buttons */}
+            <div className="flex flex-wrap justify-center gap-2">
+              {canGetHint && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => onHintRequest(nextHintLevel)}
+                  disabled={hintStream.isLoading || isLoading}
+                >
+                  Get Hint (Level {nextHintLevel})
+                </Button>
+              )}
+              {showFailureButton && onAskAboutFailure && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={onAskAboutFailure}
+                  disabled={isLoading}
+                  className="border-[var(--color-error)]/30 text-[var(--color-error)] hover:bg-[var(--color-error)]/10"
+                >
+                  Why did this fail?
+                </Button>
+              )}
             </div>
+
+            <div ref={messagesEndRef} />
           </div>
         )}
       </div>
 
-      {/* Input area — disabled placeholder */}
+      {/* Input area */}
       <div className="border-t border-[var(--color-border)] p-3">
-        <div className="flex items-center gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-primary)] px-3 py-2">
+        <form
+          onSubmit={handleSubmit}
+          className="flex items-center gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-primary)] px-3 py-2"
+        >
           <input
+            ref={inputRef}
             type="text"
-            disabled
-            placeholder="AI coaching coming soon..."
-            className="flex-1 bg-transparent text-sm text-[var(--color-text-muted)] placeholder:text-[var(--color-text-muted)] focus:outline-none disabled:cursor-not-allowed"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            disabled={!canChat || isLoading}
+            placeholder={
+              !canChat
+                ? 'Use hints to get guidance'
+                : isLoading
+                  ? 'Waiting for response...'
+                  : 'Ask your coach...'
+            }
+            className="flex-1 bg-transparent text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none disabled:cursor-not-allowed"
           />
-          <span className="text-xs text-[var(--color-text-muted)]">⌘↵</span>
-        </div>
+          <button
+            type="submit"
+            disabled={!canChat || !input.trim() || isLoading}
+            className="text-xs text-[var(--color-accent)] disabled:text-[var(--color-text-muted)]"
+          >
+            ⌘↵
+          </button>
+        </form>
       </div>
     </div>
   );
