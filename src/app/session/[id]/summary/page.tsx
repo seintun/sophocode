@@ -30,12 +30,6 @@ interface SummaryData {
   hints: Array<{ id: string }>;
 }
 
-const outcomeLabels: Record<string, string> = {
-  SOLVED: 'Solved',
-  PARTIALLY_SOLVED: 'Partially Solved',
-  NOT_SOLVED: 'Not Solved',
-};
-
 const outcomeBadgeLevel: Record<string, 'Easy' | 'Medium' | 'Hard'> = {
   SOLVED: 'Easy',
   PARTIALLY_SOLVED: 'Medium',

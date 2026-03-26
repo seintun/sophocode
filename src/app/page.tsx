@@ -46,12 +46,6 @@ const outcomeBadgeLevel: Record<string, 'Easy' | 'Medium' | 'Hard'> = {
   NOT_SOLVED: 'Hard',
 };
 
-const outcomeLabel: Record<string, string> = {
-  SOLVED: 'Solved',
-  PARTIALLY_SOLVED: 'Partial',
-  NOT_SOLVED: 'Not Solved',
-};
-
 export default function DashboardPage() {
   const guestId = useGuestId();
   const [data, setData] = useState<DashboardData | null>(null);

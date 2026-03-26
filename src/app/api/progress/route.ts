@@ -70,10 +70,25 @@ export async function GET(request: NextRequest) {
       }),
     ]);
 
-    const allAttempted = await prisma.userProblemState.findMany({
-      where: { guestId },
-      select: { problemId: true },
-    });
+    const [allAttempted, problemHistory] = await Promise.all([
+      prisma.userProblemState.findMany({
+        where: { guestId },
+        select: { problemId: true },
+      }),
+      prisma.userProblemState.findMany({
+        where: { guestId, attemptCount: { gt: 0 } },
+        orderBy: { lastAttemptedAt: 'desc' },
+        select: {
+          mastery: true,
+          attemptCount: true,
+          solveCount: true,
+          lastAttemptedAt: true,
+          problem: {
+            select: { id: true, title: true, slug: true, pattern: true, difficulty: true },
+          },
+        },
+      }),
+    ]);
     const attemptedIds = new Set(allAttempted.map((s) => s.problemId));
 
     const recommendedProblem = await prisma.problem.findFirst({
@@ -83,6 +98,26 @@ export async function GET(request: NextRequest) {
       },
       orderBy: { sortOrder: 'asc' },
       select: { id: true, title: true, slug: true, pattern: true, difficulty: true },
+    });
+
+    const allProblems = await prisma.problem.findMany({
+      select: { pattern: true },
+    });
+    const problemsByPattern = new Map<string, number>();
+    for (const p of allProblems) {
+      problemsByPattern.set(p.pattern, (problemsByPattern.get(p.pattern) ?? 0) + 1);
+    }
+
+    const patternStats = Array.from(problemsByPattern.entries()).map(([pattern, total]) => {
+      const states = problemHistory.filter((h) => h.problem.pattern === pattern);
+      return {
+        pattern,
+        total,
+        mastered: states.filter((s) => s.mastery === 'MASTERED').length,
+        inProgress: states.filter((s) => s.mastery === 'IN_PROGRESS').length,
+        needsRefresh: states.filter((s) => s.mastery === 'NEEDS_REFRESH').length,
+        unseen: total - states.length,
+      };
     });
 
     return NextResponse.json({
@@ -95,6 +130,8 @@ export async function GET(request: NextRequest) {
       needsRefresh,
       inProgressProblems,
       recommendedProblem,
+      patternStats,
+      problemHistory,
     });
   } catch (error) {
     console.error('Failed to fetch progress:', error);
