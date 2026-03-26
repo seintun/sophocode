@@ -98,7 +98,12 @@ describe('terminateWorker', () => {
     expect(mockWorker.terminate).toHaveBeenCalled();
 
     // Second call creates a new Worker
-    const newMockWorker = {
+    const newMockWorker: {
+      postMessage: ReturnType<typeof vi.fn>;
+      terminate: ReturnType<typeof vi.fn>;
+      onmessage: ((ev: any) => void) | null;
+      onerror: ((ev: any) => void) | null;
+    } = {
       postMessage: vi.fn(),
       terminate: vi.fn(),
       onmessage: null,
