@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { Button } from '@/components/ui/Button';
-import type { Difficulty, Pattern, MasteryState } from '@/generated/prisma';
+import type { Difficulty, Pattern, MasteryState } from '@/generated/prisma/enums';
 
 interface ProblemItem {
   id: string;

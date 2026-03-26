@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/prisma';
-import type { Pattern, Difficulty } from '@/generated/prisma';
+import type { Pattern, Difficulty } from '@/generated/prisma/enums';
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
