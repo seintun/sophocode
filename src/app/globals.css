@@ -18,10 +18,10 @@
   --color-error: #EF4444;
   --color-error-soft: #FDA4AF;
 
-  /* Big-O Traffic Light */
-  --color-bigo-green: #10B981;
-  --color-bigo-yellow: #F59E0B;
-  --color-bigo-red: #EF4444;
+  /* Big-O Traffic Light (aliases feedback colors) */
+  --color-bigo-green: var(--color-success);
+  --color-bigo-yellow: var(--color-warning);
+  --color-bigo-red: var(--color-error);
 
   /* Text */
   --color-text-primary: #F1F5F9;
