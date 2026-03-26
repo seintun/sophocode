@@ -1,0 +1,184 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Problem {
+  id          String     @id @default(cuid())
+  title       String
+  slug        String     @unique
+  difficulty  Difficulty
+  pattern     Pattern
+  tags        String[]
+  constraints String[]
+  sourceType  SourceType @default(INTERNAL)
+  externalUrl String?
+  statement   String
+  examples    Json
+  starterCode String     @default("")
+  approaches  Json?
+  sortOrder   Int        @default(0)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  testCases TestCase[]
+  sessions  Session[]
+}
+
+model TestCase {
+  id        String  @id @default(cuid())
+  problemId String
+  input     String
+  expected  String
+  isHidden  Boolean @default(false)
+  order     Int
+
+  problem Problem @relation(fields: [problemId], references: [id], onDelete: Cascade)
+}
+
+model Session {
+  id          String          @id @default(cuid())
+  guestId     String
+  userId      String?
+  problemId   String
+  mode        SessionMode
+  status      SessionStatus   @default(IN_PROGRESS)
+  code        String?
+  startedAt   DateTime        @default(now())
+  completedAt DateTime?
+  outcome     SessionOutcome?
+
+  problem  Problem          @relation(fields: [problemId], references: [id])
+  runs     TestRun[]
+  hints    Hint[]
+  feedback SessionFeedback?
+  messages SessionMessage[]
+
+  @@index([guestId])
+  @@index([userId])
+  @@index([problemId])
+}
+
+model TestRun {
+  id        String   @id @default(cuid())
+  sessionId String
+  code      String
+  results   Json
+  passed    Int
+  total     Int
+  createdAt DateTime @default(now())
+
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+}
+
+model Hint {
+  id        String   @id @default(cuid())
+  sessionId String
+  level     Int
+  content   String
+  createdAt DateTime @default(now())
+
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+}
+
+model SessionFeedback {
+  id             String @id @default(cuid())
+  sessionId      String @unique
+  strengths      String
+  weaknesses     String
+  suggestions    String
+  complexityNote String
+
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+}
+
+model SessionMessage {
+  id        String      @id @default(cuid())
+  sessionId String
+  role      MessageRole
+  content   String
+  metadata  Json?
+  createdAt DateTime    @default(now())
+
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+}
+
+model UserProblemState {
+  id              String       @id @default(cuid())
+  guestId         String
+  userId          String?
+  problemId       String
+  mastery         MasteryState @default(UNSEEN)
+  lastAttemptedAt DateTime?
+  nextReviewAt    DateTime?
+  attemptCount    Int          @default(0)
+  solveCount      Int          @default(0)
+
+  @@unique([guestId, problemId])
+  @@index([guestId])
+  @@index([userId])
+  @@index([problemId])
+}
+
+enum Difficulty {
+  EASY
+  MEDIUM
+  HARD
+}
+
+enum Pattern {
+  ARRAYS_STRINGS
+  HASH_MAPS
+  TWO_POINTERS
+  SLIDING_WINDOW
+  BINARY_SEARCH
+  LINKED_LISTS
+  STACKS_QUEUES
+  TREES
+  GRAPHS
+  RECURSION_BACKTRACKING
+  DYNAMIC_PROGRAMMING
+  HEAPS
+  SORTING
+  GREEDY
+}
+
+enum SourceType {
+  INTERNAL
+  EXTERNAL
+}
+
+enum SessionMode {
+  SELF_PRACTICE
+  COACH_ME
+  MOCK_INTERVIEW
+}
+
+enum SessionStatus {
+  IN_PROGRESS
+  COMPLETED
+  ABANDONED
+}
+
+enum SessionOutcome {
+  SOLVED
+  PARTIALLY_SOLVED
+  NOT_SOLVED
+}
+
+enum MasteryState {
+  UNSEEN
+  IN_PROGRESS
+  MASTERED
+  NEEDS_REFRESH
+}
+
+enum MessageRole {
+  USER
+  ASSISTANT
+  SYSTEM
+}
