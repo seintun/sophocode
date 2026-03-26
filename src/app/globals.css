@@ -1,22 +1,22 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 @theme {
   /* 60-30-10 Dark System */
-  --color-bg-primary: #0F172A;
-  --color-bg-secondary: #1E293B;
+  --color-bg-primary: #0f172a;
+  --color-bg-secondary: #1e293b;
   --color-bg-elevated: #334155;
-  --color-bg-editor: #0F172A;
+  --color-bg-editor: #0f172a;
 
   /* Accent */
-  --color-accent: #22D3EE;
-  --color-accent-hover: #06B6D4;
-  --color-ai-coach: #818CF8;
+  --color-accent: #22d3ee;
+  --color-accent-hover: #06b6d4;
+  --color-ai-coach: #818cf8;
 
   /* Feedback */
-  --color-success: #10B981;
-  --color-warning: #F59E0B;
-  --color-error: #EF4444;
-  --color-error-soft: #FDA4AF;
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-error: #ef4444;
+  --color-error-soft: #fda4af;
 
   /* Big-O Traffic Light (aliases feedback colors) */
   --color-bigo-green: var(--color-success);
@@ -24,16 +24,36 @@
   --color-bigo-red: var(--color-error);
 
   /* Text */
-  --color-text-primary: #F1F5F9;
-  --color-text-secondary: #94A3B8;
-  --color-text-muted: #64748B;
+  --color-text-primary: #f1f5f9;
+  --color-text-secondary: #94a3b8;
+  --color-text-muted: #64748b;
 
   /* Borders */
   --color-border: #334155;
-  --color-border-subtle: #1E293B;
+  --color-border-subtle: #1e293b;
 }
 
 body {
   background-color: var(--color-bg-primary);
   color: var(--color-text-primary);
+}
+
+@keyframes bar-grow {
+  from {
+    height: 0;
+  }
+  to {
+    height: var(--bar-height, 50%);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
