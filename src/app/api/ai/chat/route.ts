@@ -3,13 +3,14 @@ import { openrouter } from '@/lib/ai/provider';
 import { MODELS } from '@/lib/ai/models';
 import { buildCoachPrompt } from '@/lib/ai/prompts/coach';
 import { buildInterviewerPrompt } from '@/lib/ai/prompts/interviewer';
+import { handleApiError } from '@/lib/errors/api';
 
-export async function POST(req: Request) {
-  if (!process.env.OPENROUTER_API_KEY) {
-    return new Response('AI features temporarily unavailable', { status: 503 });
-  }
-
+export async function POST(req: Request): Promise<Response> {
   try {
+    if (!process.env.OPENROUTER_API_KEY) {
+      return new Response('AI features temporarily unavailable', { status: 503 });
+    }
+
     const body = await req.json();
     const { messages, mode, title, statement, pattern, difficulty } = body;
 
@@ -33,7 +34,6 @@ export async function POST(req: Request) {
 
     return result.toUIMessageStreamResponse();
   } catch (error) {
-    console.error('Chat route error:', error);
-    return new Response('Internal server error', { status: 500 });
+    return handleApiError(new Response('', { status: 500 }), error, 'POST /api/ai/chat');
   }
 }

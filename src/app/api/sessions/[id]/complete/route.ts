@@ -6,8 +6,12 @@ import { MODELS } from '@/lib/ai/models';
 import { buildSummaryPrompt } from '@/lib/ai/prompts/summary';
 import { computeNextMastery, computeNextReviewDate } from '@/lib/mastery';
 import type { MasteryState } from '@/generated/prisma/enums';
+import { handleApiError } from '@/lib/errors/api';
 
-export async function POST(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function POST(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+): Promise<Response> {
   try {
     const { id } = await params;
 
@@ -156,8 +160,11 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
       mastery: nextMastery,
     });
   } catch (error) {
-    console.error('Failed to complete session:', error);
-    return NextResponse.json({ error: 'Failed to complete session' }, { status: 500 });
+    return handleApiError(
+      new Response('', { status: 500 }),
+      error,
+      'POST /api/sessions/[id]/complete',
+    );
   }
 }
 

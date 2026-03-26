@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/prisma';
+import { withErrorHandling } from '@/lib/errors/api';
 
-export async function GET(request: NextRequest) {
+async function handler(request: NextRequest): Promise<Response> {
   try {
     const guestId = request.nextUrl.searchParams.get('guestId');
 
@@ -138,3 +139,5 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Failed to fetch progress' }, { status: 500 });
   }
 }
+
+export const GET = withErrorHandling(handler);

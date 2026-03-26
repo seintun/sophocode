@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/prisma';
 import type { SessionMode } from '@/generated/prisma/enums';
+import { withErrorHandling } from '@/lib/errors/api';
 
-export async function POST(request: NextRequest) {
+async function handler(request: NextRequest): Promise<Response> {
   try {
     const body = await request.json();
     const { guestId, problemId, mode } = body as {
@@ -33,3 +34,5 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Failed to create session' }, { status: 500 });
   }
 }
+
+export const POST = withErrorHandling(handler);

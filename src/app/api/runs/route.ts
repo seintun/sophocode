@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/prisma';
+import { withErrorHandling } from '@/lib/errors/api';
 
-export async function POST(request: NextRequest) {
+async function handler(request: NextRequest): Promise<Response> {
   try {
     const body = await request.json();
     const { sessionId, code, results, passed, total } = body as {
@@ -41,3 +42,5 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Failed to create test run' }, { status: 500 });
   }
 }
+
+export const POST = withErrorHandling(handler);

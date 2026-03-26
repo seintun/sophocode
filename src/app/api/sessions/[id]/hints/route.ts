@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/prisma';
+import { handleApiError } from '@/lib/errors/api';
 
-export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function POST(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+): Promise<Response> {
   try {
     const { id: sessionId } = await params;
     const body = await req.json();
@@ -31,7 +35,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     return NextResponse.json(hint, { status: 201 });
   } catch (error) {
-    console.error('Hint persistence error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return handleApiError(
+      new Response('', { status: 500 }),
+      error,
+      'POST /api/sessions/[id]/hints',
+    );
   }
 }

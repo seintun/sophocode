@@ -2,13 +2,14 @@ import { streamText } from 'ai';
 import { openrouter } from '@/lib/ai/provider';
 import { MODELS } from '@/lib/ai/models';
 import { buildSummaryPrompt } from '@/lib/ai/prompts/summary';
+import { handleApiError } from '@/lib/errors/api';
 
-export async function POST(req: Request) {
-  if (!process.env.OPENROUTER_API_KEY) {
-    return new Response('AI features temporarily unavailable', { status: 503 });
-  }
-
+export async function POST(req: Request): Promise<Response> {
   try {
+    if (!process.env.OPENROUTER_API_KEY) {
+      return new Response('AI features temporarily unavailable', { status: 503 });
+    }
+
     const body = await req.json();
     const { title, pattern, finalCode, testResults, hintsUsed, timeSpentSeconds } = body;
 
@@ -40,7 +41,6 @@ export async function POST(req: Request) {
 
     return result.toUIMessageStreamResponse();
   } catch (error) {
-    console.error('Summary route error:', error);
-    return new Response('Internal server error', { status: 500 });
+    return handleApiError(new Response('', { status: 500 }), error, 'POST /api/ai/summary');
   }
 }

@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/prisma';
 import type { SessionStatus, SessionOutcome } from '@/generated/prisma/enums';
+import { handleApiError } from '@/lib/errors/api';
 
-export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+): Promise<Response> {
   try {
     const { id } = await params;
 
@@ -33,12 +37,14 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
 
     return NextResponse.json(session);
   } catch (error) {
-    console.error('Failed to fetch session:', error);
-    return NextResponse.json({ error: 'Failed to fetch session' }, { status: 500 });
+    return handleApiError(new Response('', { status: 500 }), error, 'GET /api/sessions/[id]');
   }
 }
 
-export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+): Promise<Response> {
   try {
     const { id } = await params;
     const body = await request.json();
@@ -66,7 +72,6 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
     return NextResponse.json(session);
   } catch (error) {
-    console.error('Failed to update session:', error);
-    return NextResponse.json({ error: 'Failed to update session' }, { status: 500 });
+    return handleApiError(new Response('', { status: 500 }), error, 'PATCH /api/sessions/[id]');
   }
 }
