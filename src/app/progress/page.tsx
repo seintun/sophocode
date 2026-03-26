@@ -112,17 +112,17 @@ export default function ProgressPage() {
                           <div className="mt-1 flex items-center gap-2">
                             <Badge
                               variant="difficulty"
-                              level={
+                              value={
                                 item.problem.difficulty === 'EASY'
-                                  ? 'Easy'
+                                  ? 'EASY'
                                   : item.problem.difficulty === 'MEDIUM'
-                                    ? 'Medium'
-                                    : 'Hard'
+                                    ? 'MEDIUM'
+                                    : 'HARD'
                               }
                             />
                             <Badge
                               variant="pattern"
-                              label={item.problem.pattern.replace(/_/g, ' ')}
+                              value={item.problem.pattern.replace(/_/g, ' ')}
                             />
                           </div>
                         </div>
@@ -171,11 +171,11 @@ export default function ProgressPage() {
                           <td className="py-2 pr-4">
                             <Badge
                               variant="pattern"
-                              label={item.problem.pattern.replace(/_/g, ' ')}
+                              value={item.problem.pattern.replace(/_/g, ' ')}
                             />
                           </td>
                           <td className="py-2 pr-4">
-                            <Badge variant="mastery" state={item.mastery} />
+                            <Badge variant="mastery" value={item.mastery} />
                           </td>
                           <td className="py-2 pr-4 text-[var(--color-text-secondary)]">
                             {item.solveCount}/{item.attemptCount} solved

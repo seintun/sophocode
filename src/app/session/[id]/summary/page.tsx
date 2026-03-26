@@ -30,10 +30,10 @@ interface SummaryData {
   hints: Array<{ id: string }>;
 }
 
-const outcomeBadgeLevel: Record<string, 'Easy' | 'Medium' | 'Hard'> = {
-  SOLVED: 'Easy',
-  PARTIALLY_SOLVED: 'Medium',
-  NOT_SOLVED: 'Hard',
+const outcomeBadgeLevel: Record<string, 'EASY' | 'MEDIUM' | 'HARD'> = {
+  SOLVED: 'EASY',
+  PARTIALLY_SOLVED: 'MEDIUM',
+  NOT_SOLVED: 'HARD',
 };
 
 export default function SessionSummaryPage() {
@@ -111,8 +111,8 @@ export default function SessionSummaryPage() {
           <p className="mt-1 text-sm text-[var(--color-text-secondary)]">{data.problem.title}</p>
         </div>
         <div className="flex items-center gap-2">
-          <Badge variant="pattern" label={data.problem.pattern.replace(/_/g, ' ')} />
-          {data.outcome && <Badge variant="difficulty" level={outcomeBadgeLevel[data.outcome]} />}
+          <Badge variant="pattern" value={data.problem.pattern.replace(/_/g, ' ')} />
+          {data.outcome && <Badge variant="difficulty" value={outcomeBadgeLevel[data.outcome]} />}
         </div>
       </div>
 

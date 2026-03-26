@@ -141,7 +141,7 @@ export default function ProblemList() {
           >
             <Badge
               variant="difficulty"
-              level={d === 'HARD' ? 'Hard' : d === 'MEDIUM' ? 'Medium' : 'Easy'}
+              value={d === 'HARD' ? 'HARD' : d === 'MEDIUM' ? 'MEDIUM' : 'EASY'}
             />
           </button>
         ))}
@@ -189,18 +189,18 @@ export default function ProblemList() {
                   </p>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
-                  <Badge variant="pattern" label={formatPattern(problem.pattern)} />
+                  <Badge variant="pattern" value={formatPattern(problem.pattern)} />
                   <Badge
                     variant="difficulty"
-                    level={
+                    value={
                       problem.difficulty === 'HARD'
-                        ? 'Hard'
+                        ? 'HARD'
                         : problem.difficulty === 'MEDIUM'
-                          ? 'Medium'
-                          : 'Easy'
+                          ? 'MEDIUM'
+                          : 'EASY'
                     }
                   />
-                  {problem.mastery && <Badge variant="mastery" state={problem.mastery} />}
+                  {problem.mastery && <Badge variant="mastery" value={problem.mastery} />}
                 </div>
               </Card>
             </Link>

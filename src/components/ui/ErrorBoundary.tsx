@@ -1,11 +1,12 @@
 'use client';
 
 import { Component, type ReactNode, type ErrorInfo } from 'react';
-import { Button } from '@/components/ui/Button';
+import { ErrorFallback } from './ErrorFallback';
 
 interface ErrorBoundaryProps {
   children: ReactNode;
   fallback?: ReactNode;
+  onRetry?: () => void;
 }
 
 interface ErrorBoundaryState {
@@ -21,10 +22,11 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
-    console.error('ErrorBoundary caught:', error, info.componentStack);
+    console.error('PATRNCODE ERROR:', error, info.componentStack);
   }
 
   handleReset = () => {
+    this.props.onRetry?.();
     this.setState({ hasError: false, error: null });
   };
 
@@ -33,19 +35,9 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
       if (this.props.fallback) return this.props.fallback;
 
       return (
-        <div className="flex flex-col items-center justify-center gap-4 p-8 text-center">
-          <div className="rounded-lg border border-[var(--color-error)]/30 bg-[var(--color-bg-secondary)] p-6">
-            <p className="mb-1 text-sm font-medium text-[var(--color-error)]">
-              Something went wrong
-            </p>
-            <p className="mb-4 text-sm text-[var(--color-text-muted)]">
-              {this.state.error?.message ?? 'An unexpected error occurred.'}
-            </p>
-            <Button variant="secondary" size="sm" onClick={this.handleReset}>
-              Try Again
-            </Button>
-          </div>
-        </div>
+        <ErrorFallback error={this.state.error!} onRetry={this.handleReset}>
+          {this.props.children}
+        </ErrorFallback>
       );
     }
 

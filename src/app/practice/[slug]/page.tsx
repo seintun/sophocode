@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
+import { getGuestId } from '@/lib/guest';
 
 interface TestCase {
   id: string;
@@ -112,7 +113,7 @@ export default function ProblemDetailPage() {
   }
 
   const difficultyLabel =
-    problem.difficulty === 'HARD' ? 'Hard' : problem.difficulty === 'MEDIUM' ? 'Medium' : 'Easy';
+    problem.difficulty === 'HARD' ? 'HARD' : problem.difficulty === 'MEDIUM' ? 'MEDIUM' : 'EASY';
 
   return (
     <ErrorBoundary>
@@ -126,7 +127,7 @@ function ProblemDetailContent({
   difficultyLabel,
 }: {
   problem: ProblemDetail;
-  difficultyLabel: 'Easy' | 'Medium' | 'Hard';
+  difficultyLabel: 'EASY' | 'MEDIUM' | 'HARD';
 }) {
   const router = useRouter();
   const [selectedMode, setSelectedMode] = useState<SessionMode>('SELF_PRACTICE');
@@ -139,6 +140,7 @@ function ProblemDetailContent({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          guestId: getGuestId(),
           problemId: problem.id,
           mode: selectedMode,
         }),
@@ -155,8 +157,8 @@ function ProblemDetailContent({
     <div className="mx-auto max-w-4xl px-4 py-8">
       <div className="mb-6 flex items-center gap-3">
         <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">{problem.title}</h1>
-        <Badge variant="difficulty" level={difficultyLabel} />
-        <Badge variant="pattern" label={formatPattern(problem.pattern)} />
+        <Badge variant="difficulty" value={difficultyLabel} />
+        <Badge variant="pattern" value={formatPattern(problem.pattern)} />
       </div>
 
       <div className="mb-8">
