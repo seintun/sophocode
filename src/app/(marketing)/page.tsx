@@ -13,11 +13,17 @@ export default function LandingPage() {
         <p className="mx-auto mb-8 max-w-2xl text-lg text-[var(--color-text-secondary)]">
           Learn patterns, not just problems. Get coached through Clarify → Plan → Code → Reflect.
         </p>
-        <Link href="/practice">
+        <Link href="/onboarding">
           <Button size="lg">Start practicing free</Button>
         </Link>
         <p className="mt-3 text-sm text-[var(--color-text-muted)]">
           No sign-up needed. Jump right in.
+        </p>
+        <p className="mt-2 text-xs text-[var(--color-text-muted)]">
+          Already familiar?{' '}
+          <Link href="/practice" className="underline hover:text-[var(--color-accent)]">
+            Skip to problems
+          </Link>
         </p>
       </section>
 
