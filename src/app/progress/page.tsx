@@ -1,4 +1,11 @@
-'use client';
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Progress - patrncode',
+  robots: { index: false, follow: false },
+};
+
+('use client');
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';

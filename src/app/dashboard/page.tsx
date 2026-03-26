@@ -1,4 +1,11 @@
-'use client';
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Dashboard - patrncode',
+  robots: { index: false, follow: false },
+};
+
+('use client');
 
 import { useEffect, useState } from 'react';
 import { Card } from '@/components/ui/Card';

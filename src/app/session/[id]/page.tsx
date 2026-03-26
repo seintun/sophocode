@@ -1,4 +1,11 @@
-'use client';
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Session - patrncode',
+  robots: { index: false, follow: false },
+};
+
+('use client');
 
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
