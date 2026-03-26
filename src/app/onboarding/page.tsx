@@ -1,11 +1,4 @@
-import type { Metadata } from 'next';
-
-export const metadata: Metadata = {
-  title: 'Onboarding - patrncode',
-  robots: { index: false, follow: false },
-};
-
-('use client');
+'use client';
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
