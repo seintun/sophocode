@@ -61,6 +61,7 @@ export function TestResults({
         {hasFailures && onAskAboutFailure && (
           <button
             onClick={handleAskAboutFailure}
+            aria-label="Ask AI why tests failed"
             className="text-xs text-[var(--color-ai-coach)] underline decoration-dotted hover:text-[var(--color-ai-coach)]/80"
           >
             Why did this fail?

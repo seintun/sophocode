@@ -8,6 +8,7 @@ import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 
 interface TestCase {
   id: string;
@@ -66,8 +67,6 @@ export default function ProblemDetailPage() {
   const [problem, setProblem] = useState<ProblemDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [selectedMode, setSelectedMode] = useState<SessionMode>('SELF_PRACTICE');
-  const [starting, setStarting] = useState(false);
 
   const fetchProblem = useCallback(async () => {
     setLoading(true);
@@ -88,29 +87,6 @@ export default function ProblemDetailPage() {
   useEffect(() => {
     fetchProblem();
   }, [fetchProblem]);
-
-  const handleStartSession = async () => {
-    if (!problem) return;
-    setStarting(true);
-
-    try {
-      const res = await fetch('/api/sessions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          problemId: problem.id,
-          mode: selectedMode,
-        }),
-      });
-
-      if (!res.ok) throw new Error('Failed to create session');
-
-      const session = await res.json();
-      router.push(`/session/${session.id}`);
-    } catch {
-      setStarting(false);
-    }
-  };
 
   if (loading) {
     return (
@@ -137,6 +113,43 @@ export default function ProblemDetailPage() {
 
   const difficultyLabel =
     problem.difficulty === 'HARD' ? 'Hard' : problem.difficulty === 'MEDIUM' ? 'Medium' : 'Easy';
+
+  return (
+    <ErrorBoundary>
+      <ProblemDetailContent problem={problem} difficultyLabel={difficultyLabel} />
+    </ErrorBoundary>
+  );
+}
+
+function ProblemDetailContent({
+  problem,
+  difficultyLabel,
+}: {
+  problem: ProblemDetail;
+  difficultyLabel: 'Easy' | 'Medium' | 'Hard';
+}) {
+  const router = useRouter();
+  const [selectedMode, setSelectedMode] = useState<SessionMode>('SELF_PRACTICE');
+  const [starting, setStarting] = useState(false);
+
+  const handleStartSession = async () => {
+    setStarting(true);
+    try {
+      const res = await fetch('/api/sessions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          problemId: problem.id,
+          mode: selectedMode,
+        }),
+      });
+      if (!res.ok) throw new Error('Failed to create session');
+      const session = await res.json();
+      router.push(`/session/${session.id}`);
+    } catch {
+      setStarting(false);
+    }
+  };
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">

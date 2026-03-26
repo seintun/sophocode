@@ -96,6 +96,7 @@ export function CoachingPanel({
               size="sm"
               onClick={() => onHintRequest(nextHintLevel)}
               disabled={!canGetHint || hintStream.isLoading}
+              aria-label={`Get hint level ${nextHintLevel}`}
             >
               {hintStream.isLoading ? 'Getting hint...' : `Get Hint (Level ${nextHintLevel})`}
             </Button>
@@ -155,6 +156,7 @@ export function CoachingPanel({
                   size="sm"
                   onClick={() => onHintRequest(nextHintLevel)}
                   disabled={hintStream.isLoading || isLoading}
+                  aria-label={`Get hint level ${nextHintLevel}`}
                 >
                   Get Hint (Level {nextHintLevel})
                 </Button>
@@ -165,6 +167,7 @@ export function CoachingPanel({
                   size="sm"
                   onClick={onAskAboutFailure}
                   disabled={isLoading}
+                  aria-label="Ask coach why tests failed"
                   className="border-[var(--color-error)]/30 text-[var(--color-error)] hover:bg-[var(--color-error)]/10"
                 >
                   Why did this fail?
@@ -190,6 +193,7 @@ export function CoachingPanel({
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             disabled={!canChat || isLoading}
+            aria-label="Chat message input"
             placeholder={
               !canChat
                 ? 'Use hints to get guidance'
@@ -202,6 +206,7 @@ export function CoachingPanel({
           <button
             type="submit"
             disabled={!canChat || !input.trim() || isLoading}
+            aria-label="Send message"
             className="text-xs text-[var(--color-accent)] disabled:text-[var(--color-text-muted)]"
           >
             ⌘↵
