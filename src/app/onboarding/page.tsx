@@ -45,7 +45,7 @@ function StepIndicator({
 
 function SkipLink({ onSkip }: { onSkip: () => void }) {
   return (
-    <div className="mt-4 block w-full text-center sm:mt-8">
+    <div className="block w-full text-center">
       <button
         onClick={onSkip}
         className="group inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium text-[var(--color-text-muted)] transition-all hover:bg-[var(--color-bg-elevated)] hover:text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
