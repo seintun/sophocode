@@ -83,6 +83,7 @@ export function PatternHeatmap({ stats }: PatternHeatmapProps) {
 
         return (
           <button
+            type="button"
             key={pattern}
             aria-label={`${patternLabels[pattern] ?? pattern.replace(/_/g, ' ')}: ${stat.total > 0 ? `${stat.mastered} of ${stat.total} mastered` : 'Not started'}. Status: ${dominant.replace(/_/g, ' ')}`}
             className={cn(

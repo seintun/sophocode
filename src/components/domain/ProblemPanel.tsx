@@ -155,42 +155,44 @@ export function ProblemPanel({
           )}
         </div>
 
-        <div
-          role="tabpanel"
-          id="panel-explanation"
-          aria-labelledby="tab-explanation"
-          hidden={activeTab !== 'explanation'}
-        >
-          {activeTab === 'explanation' && showExplanation && (
-            <div className="space-y-3">
-              {explanationStream?.isLoading && !explanationStream.text && (
-                <div className="flex items-center gap-2 text-sm text-[var(--color-text-muted)]">
-                  <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-[var(--color-ai-coach)] border-t-transparent" />
-                  Generating explanation...
-                </div>
-              )}
-              {explanationStream?.text && (
-                <div className="whitespace-pre-wrap font-[family-name:var(--font-inter)] text-sm leading-relaxed text-[var(--color-text-primary)]">
-                  {explanationStream.text}
-                  {explanationStream.isLoading && (
-                    <span className="inline-block h-3 w-3 animate-pulse rounded-full bg-[var(--color-ai-coach)]" />
-                  )}
-                </div>
-              )}
-              {!explanationStream?.text && !explanationStream?.isLoading && (
-                <button
-                  onClick={() => {
-                    // setExplanationRequested is handled in handleTabClick
-                    getExplanation?.();
-                  }}
-                  className="rounded-lg border border-[var(--color-ai-coach)]/30 bg-[var(--color-ai-coach)]/10 px-4 py-2 text-sm text-[var(--color-ai-coach)] transition-colors hover:bg-[var(--color-ai-coach)]/20"
-                >
-                  Explain this problem
-                </button>
-              )}
-            </div>
-          )}
-        </div>
+        {showExplanation && (
+          <div
+            role="tabpanel"
+            id="panel-explanation"
+            aria-labelledby="tab-explanation"
+            hidden={activeTab !== 'explanation'}
+          >
+            {activeTab === 'explanation' && (
+              <div className="space-y-3">
+                {explanationStream?.isLoading && !explanationStream.text && (
+                  <div className="flex items-center gap-2 text-sm text-[var(--color-text-muted)]">
+                    <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-[var(--color-ai-coach)] border-t-transparent" />
+                    Generating explanation...
+                  </div>
+                )}
+                {explanationStream?.text && (
+                  <div className="whitespace-pre-wrap font-[family-name:var(--font-inter)] text-sm leading-relaxed text-[var(--color-text-primary)]">
+                    {explanationStream.text}
+                    {explanationStream.isLoading && (
+                      <span className="inline-block h-3 w-3 animate-pulse rounded-full bg-[var(--color-ai-coach)]" />
+                    )}
+                  </div>
+                )}
+                {!explanationStream?.text && !explanationStream?.isLoading && (
+                  <button
+                    onClick={() => {
+                      // setExplanationRequested is handled in handleTabClick
+                      getExplanation?.();
+                    }}
+                    className="rounded-lg border border-[var(--color-ai-coach)]/30 bg-[var(--color-ai-coach)]/10 px-4 py-2 text-sm text-[var(--color-ai-coach)] transition-colors hover:bg-[var(--color-ai-coach)]/20"
+                  >
+                    Explain this problem
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         <div
           role="tabpanel"

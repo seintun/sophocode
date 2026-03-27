@@ -12,9 +12,9 @@ const variantStyles = {
 };
 
 const sizeStyles = {
-  sm: 'px-3 py-2 text-sm min-h-10',
+  sm: 'px-3 py-2 text-sm min-h-11',
   md: 'px-5 py-2.5 text-base min-h-11',
-  lg: 'px-6 py-3.5 text-lg min-h-13',
+  lg: 'px-6 py-3.5 text-lg min-h-12',
 };
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
