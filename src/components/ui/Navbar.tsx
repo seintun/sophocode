@@ -37,7 +37,7 @@ export default function Navbar() {
         {/* Logo */}
         <Link
           href="/"
-          className="text-xl font-bold text-[var(--color-accent)] transition-colors hover:text-[var(--color-accent-hover)]"
+          className="bg-gradient-to-r from-[var(--color-accent)] to-[var(--color-ai-coach)] bg-clip-text font-mono text-xl font-bold text-transparent transition-opacity hover:opacity-80"
         >
           sophocode
         </Link>
