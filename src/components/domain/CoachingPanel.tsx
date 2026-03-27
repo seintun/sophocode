@@ -81,7 +81,7 @@ export function CoachingPanel({
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4">
+      <div className="flex-1 overflow-y-auto p-4" aria-live="polite">
         {messages.length === 0 && !hintStream.text ? (
           <div className="flex h-full flex-col items-center justify-center gap-4 text-center">
             <p className="text-sm text-[var(--color-text-muted)]">
