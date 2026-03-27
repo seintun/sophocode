@@ -1,8 +1,10 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { useCallback, useRef, useEffect, useState, useMemo } from 'react';
+import { useCallback, useRef, useEffect, useState, useMemo, useLayoutEffect } from 'react';
 import { Skeleton } from '@/components/ui/Skeleton';
+
+const useIsomorphicLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect;
 
 const MonacoEditor = dynamic(() => import('@monaco-editor/react'), {
   ssr: false,
@@ -23,10 +25,13 @@ export function CodeEditor({ value, onChange, language = 'python' }: CodeEditorP
   const timerRef = useRef<ReturnType<typeof setTimeout>>(null);
   const editorRef = useRef<any>(null);
   const [mounted, setMounted] = useState(false);
-  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+  const isMobile = mounted && window.innerWidth < 768;
+
+  useIsomorphicLayoutEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
-    setMounted(true);
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
