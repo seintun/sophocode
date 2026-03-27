@@ -190,12 +190,13 @@ export function CoachingPanel({
         >
           <input
             ref={inputRef}
+            id="coach-input"
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             disabled={!canChat || isLoading}
-            aria-label="Chat message input"
+            aria-label="Ask Sophia a question"
             placeholder={
               !canChat
                 ? 'Use hints to get guidance'

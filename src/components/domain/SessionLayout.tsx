@@ -78,8 +78,8 @@ export function SessionLayout({ problem, editor, testResults, coach }: SessionLa
           >
             {activeTab === 'code' && (
               <div className="flex h-full flex-col">
-                <div className="flex-1 min-h-0">{editor}</div>
-                <div className="border-t border-[var(--color-border)] h-[35%] overflow-y-auto">
+                <div className="flex-1 min-h-[300px]">{editor}</div>
+                <div className="border-t border-[var(--color-border)] min-h-[150px] max-h-[40%] overflow-y-auto">
                   {testResults}
                 </div>
               </div>
