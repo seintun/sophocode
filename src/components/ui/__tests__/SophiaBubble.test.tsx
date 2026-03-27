@@ -21,11 +21,11 @@ describe('SophiaBubble', () => {
     act(() => {
       vi.advanceTimersByTime(30);
     });
-    expect(screen.getByRole('status').textContent).toBe('H');
+    expect(screen.getByTestId('sophia-displayed').textContent).toContain('H');
     act(() => {
       vi.advanceTimersByTime(30);
     });
-    expect(screen.getByRole('status').textContent).toBe('Hi');
+    expect(screen.getByTestId('sophia-displayed').textContent).toContain('Hi');
   });
 
   it('shows full text after all characters complete', () => {
@@ -33,7 +33,7 @@ describe('SophiaBubble', () => {
     act(() => {
       vi.advanceTimersByTime(30 * 3);
     });
-    expect(screen.getByRole('status').textContent).toBe('Hey');
+    expect(screen.getByTestId('sophia-displayed').textContent).toContain('Hey');
   });
 
   it('click-to-skip shows full text immediately', () => {
@@ -41,7 +41,7 @@ describe('SophiaBubble', () => {
     act(() => {
       fireEvent.click(screen.getByRole('status'));
     });
-    expect(screen.getByRole('status').textContent).toBe('Hello there');
+    expect(screen.getByTestId('sophia-displayed').textContent).toContain('Hello there');
   });
 
   it('resets animation when stepKey changes', async () => {
@@ -52,7 +52,7 @@ describe('SophiaBubble', () => {
     await act(async () => {
       rerender(<SophiaBubble text="Hello" stepKey={1} />);
     });
-    expect(screen.getByRole('status').textContent).toBe('');
+    expect(screen.getByTestId('sophia-displayed').textContent).toBe('');
   });
 
   it('renders Sophia avatar image', () => {

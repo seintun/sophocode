@@ -62,27 +62,35 @@ export function SophiaBubble({ text, stepKey }: SophiaBubbleProps) {
             borderRight: `8px solid ${colors.primary}`,
           }}
         />
+        {/* Invisible full text reserves the exact final height — no layout shift */}
         <div
           role="status"
           aria-live="polite"
           aria-label="Sophia says"
           onClick={skip}
-          className="cursor-pointer rounded-lg px-4 py-3 text-sm leading-relaxed"
+          className="relative cursor-pointer rounded-lg px-4 py-3 text-sm leading-relaxed"
           style={{
             backgroundColor: colors.bg,
-            color: colors.text,
             borderLeft: `2px solid ${colors.primary}`,
-            minHeight: '2.5rem',
           }}
         >
-          {displayed}
-          {displayed.length < text.length && (
-            <span
-              className="ml-0.5 inline-block h-3 w-0.5 animate-pulse"
-              style={{ backgroundColor: colors.primary }}
-              aria-hidden="true"
-            />
-          )}
+          <span aria-hidden="true" className="invisible select-none">
+            {text}
+          </span>
+          <span
+            data-testid="sophia-displayed"
+            className="absolute inset-0 px-4 py-3 text-sm leading-relaxed"
+            style={{ color: colors.text }}
+          >
+            {displayed}
+            {displayed.length < text.length && (
+              <span
+                className="ml-0.5 inline-block h-3 w-0.5 animate-pulse"
+                style={{ backgroundColor: colors.primary }}
+                aria-hidden="true"
+              />
+            )}
+          </span>
         </div>
       </div>
     </div>
