@@ -1,4 +1,4 @@
 export const MODELS = {
-  reasoning: 'nvidia/nemotron-3-super-120b-a12b:free',
-  summary: 'nvidia/nemotron-3-super-120b-a12b:free',
+  reasoning: 'openrouter/free',
+  summary: 'openrouter/free',
 } as const;

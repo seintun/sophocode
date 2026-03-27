@@ -57,7 +57,7 @@ _actual = _stdout_capture.getvalue().strip()
 _errors = _stderr_capture.getvalue().strip()
 `;
 
-  py.run(setup + '\n' + execution);
+  py.runPython(setup + '\n' + execution);
 
   const actual = py.globals.get('_actual') || '';
   const errorMsg = py.globals.get('_error_msg');
