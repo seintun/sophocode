@@ -1,24 +1,6 @@
 let pyodide = null;
 let loading = false;
 
-// Lines in the combined script before user code starts (setup + '\n' + leading '\n' of execution)
-const CODE_LINE_OFFSET = 21;
-
-function cleanError(raw, offset) {
-  if (!raw) return raw;
-  return raw
-    .split('\n')
-    .filter(
-      (line) =>
-        !line.includes('/lib/python') &&
-        !line.includes('pyodide') &&
-        line.trim() !== 'Traceback (most recent call last):',
-    )
-    .join('\n')
-    .replace(/line (\d+)/g, (_, n) => `line ${Math.max(1, parseInt(n, 10) - offset)}`)
-    .trim();
-}
-
 async function loadPyodideInstance() {
   if (pyodide) return pyodide;
   if (loading) {
@@ -66,6 +48,11 @@ try:
             return ''
 `;
 
+  // Compute offset dynamically: count lines in the combined script
+  // before user code starts (setup + "except Exception" line)
+  const setupLineCount = setup.split('\n').length;
+  const codeLineOffset = setupLineCount + 1; // +1 for the blank line before user code
+
   const execution = `
 ${indentedCode}
 except Exception as _e:
@@ -81,10 +68,25 @@ _actual = _stdout_capture.getvalue().strip()
 _errors = _stderr_capture.getvalue().strip()
 `;
 
+  function cleanError(raw) {
+    if (!raw) return raw;
+    return raw
+      .split('\n')
+      .filter(
+        (line) =>
+          !line.includes('/lib/python') &&
+          !line.includes('pyodide') &&
+          line.trim() !== 'Traceback (most recent call last):',
+      )
+      .join('\n')
+      .replace(/line (\d+)/g, (_, n) => `line ${Math.max(1, parseInt(n, 10) - codeLineOffset)}`)
+      .trim();
+  }
+
   try {
     py.runPython(setup + '\n' + execution);
   } catch (syntaxErr) {
-    return { actual: '', error: cleanError(syntaxErr.message, CODE_LINE_OFFSET) };
+    return { actual: '', error: cleanError(syntaxErr.message) };
   }
 
   const actual = py.globals.get('_actual') || '';
@@ -92,10 +94,10 @@ _errors = _stderr_capture.getvalue().strip()
   const stderr = py.globals.get('_errors') || '';
 
   if (errorMsg) {
-    return { actual: '', error: cleanError(errorMsg, CODE_LINE_OFFSET) };
+    return { actual: '', error: cleanError(errorMsg) };
   }
   if (stderr) {
-    return { actual: '', error: cleanError(stderr, CODE_LINE_OFFSET) };
+    return { actual: '', error: cleanError(stderr) };
   }
   return { actual, error: undefined };
 }

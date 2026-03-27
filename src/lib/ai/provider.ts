@@ -10,7 +10,11 @@ const openaiBase = createOpenAI({
 export const openrouter = Object.assign((modelId: string) => openaiBase.chat(modelId), {
   chat: openaiBase.chat,
   completion: openaiBase.completion,
-  responses: openaiBase.responses,
+  responses: () => {
+    throw new Error(
+      'OpenRouter does not support the Responses API. Use .chat() or .completion() instead.',
+    );
+  },
   embedding: openaiBase.embedding,
   image: openaiBase.image,
   speech: openaiBase.speech,

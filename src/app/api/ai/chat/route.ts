@@ -14,15 +14,16 @@ export async function POST(req: Request): Promise<Response> {
     const body = await req.json();
     const { messages, mode, title, statement, pattern, difficulty } = body;
 
-    // Validate required problem context fields
+    // Validate required fields
     const missingFields: string[] = [];
+    if (!Array.isArray(messages)) missingFields.push('messages');
     if (!title || typeof title !== 'string') missingFields.push('title');
     if (!statement || typeof statement !== 'string') missingFields.push('statement');
     if (!pattern || typeof pattern !== 'string') missingFields.push('pattern');
     if (!difficulty || typeof difficulty !== 'string') missingFields.push('difficulty');
 
     if (missingFields.length > 0) {
-      const errorMsg = `Missing required problem context fields: ${missingFields.join(', ')}`;
+      const errorMsg = `Missing required fields: ${missingFields.join(', ')}`;
       return new Response(JSON.stringify({ error: errorMsg, missingFields }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
