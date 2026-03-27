@@ -4,13 +4,15 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { SophiaBubble } from '@/components/ui/SophiaBubble';
 import { cn } from '@/lib/utils';
 
-const TOTAL_STEPS = 5;
+const TOTAL_STEPS = 6;
 
 interface StepProps {
   onNext: () => void;
   onSkip: () => void;
+  stepKey: number;
 }
 
 function StepIndicator({
@@ -60,8 +62,45 @@ function SkipLink({ onSkip }: { onSkip: () => void }) {
   );
 }
 
-// Step 1: Welcome — Experience Level
-function WelcomeStep({ onNext, onSkip }: StepProps) {
+// Step 1: Meet Sophia (new)
+function MeetSophiaStep({ onNext, onSkip }: StepProps) {
+  return (
+    <div className="space-y-6 text-center">
+      <div className="flex flex-col items-center gap-5">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/sophia/modes_sophia.avif"
+          alt="Sophia, your AI coding coach"
+          className="rounded-xl object-cover"
+          style={{
+            width: 260,
+            height: 260,
+            outline: '2px solid #2dd4bf',
+            outlineOffset: '3px',
+          }}
+        />
+        <div>
+          <h1 className="text-3xl font-bold text-[var(--color-text-primary)]">Meet Sophia</h1>
+          <p className="mt-1 text-sm font-medium" style={{ color: '#2dd4bf' }}>
+            Your AI Coding Coach
+          </p>
+        </div>
+        <p className="mx-auto max-w-md text-lg text-[var(--color-text-secondary)]">
+          &ldquo;Hey, I&rsquo;m Sophia. Think of me as the senior engineer who sits next to you
+          &mdash; I won&rsquo;t solve it for you, but I&rsquo;ll never let you stay stuck
+          either.&rdquo;
+        </p>
+      </div>
+      <Button onClick={onNext} size="lg">
+        Let&rsquo;s go
+      </Button>
+      <SkipLink onSkip={onSkip} />
+    </div>
+  );
+}
+
+// Step 2: Welcome — Experience Level
+function WelcomeStep({ onNext, onSkip, stepKey }: StepProps) {
   const levels = [
     {
       key: 'new',
@@ -87,6 +126,10 @@ function WelcomeStep({ onNext, onSkip }: StepProps) {
 
   return (
     <div className="space-y-6 text-center">
+      <SophiaBubble
+        text="First things first — where are you starting from? No wrong answer here."
+        stepKey={stepKey}
+      />
       <div>
         <h1 className="text-3xl font-bold text-[var(--color-text-primary)]">
           Welcome to sophocode
@@ -110,8 +153,8 @@ function WelcomeStep({ onNext, onSkip }: StepProps) {
   );
 }
 
-// Step 2: What Interviews Test
-function InterviewTestStep({ onNext, onSkip }: StepProps) {
+// Step 3: What Interviews Test
+function InterviewTestStep({ onNext, onSkip, stepKey }: StepProps) {
   const bullets = [
     'Pattern recognition — spotting the underlying structure in a problem',
     'Communication — explaining your thought process clearly',
@@ -121,6 +164,10 @@ function InterviewTestStep({ onNext, onSkip }: StepProps) {
 
   return (
     <div className="space-y-6 text-center">
+      <SophiaBubble
+        text="Here's what most people get wrong: interviews aren't testing if you know the answer. They're testing how you think."
+        stepKey={stepKey}
+      />
       <div>
         <h2 className="text-3xl font-bold text-[var(--color-text-primary)]">
           What Interviews Test
@@ -150,8 +197,8 @@ function InterviewTestStep({ onNext, onSkip }: StepProps) {
   );
 }
 
-// Step 3: The Process
-function ProcessStep({ onNext, onSkip }: StepProps) {
+// Step 4: The Process
+function ProcessStep({ onNext, onSkip, stepKey }: StepProps) {
   const phases = [
     {
       num: '1',
@@ -177,6 +224,10 @@ function ProcessStep({ onNext, onSkip }: StepProps) {
 
   return (
     <div className="space-y-6 text-center">
+      <SophiaBubble
+        text="I'll be coaching you through this same four-step process every session. It works for any problem, any company."
+        stepKey={stepKey}
+      />
       <div>
         <h2 className="text-3xl font-bold text-[var(--color-text-primary)]">The Process</h2>
         <p className="mt-2 text-lg text-[var(--color-text-secondary)]">
@@ -207,8 +258,8 @@ function ProcessStep({ onNext, onSkip }: StepProps) {
   );
 }
 
-// Step 4: Big-O Made Simple
-function BigOStep({ onNext, onSkip }: StepProps) {
+// Step 5: Big-O Made Simple
+function BigOStep({ onNext, onSkip, stepKey }: StepProps) {
   const complexities = [
     { label: 'O(1)', name: 'Constant', color: 'var(--color-bigo-green)', height: 12 },
     { label: 'O(log n)', name: 'Logarithmic', color: 'var(--color-bigo-green)', height: 28 },
@@ -219,6 +270,10 @@ function BigOStep({ onNext, onSkip }: StepProps) {
 
   return (
     <div className="space-y-6 text-center">
+      <SophiaBubble
+        text="One thing interviewers always ask about: how efficient is your solution? Here's what that means."
+        stepKey={stepKey}
+      />
       <div>
         <h2 className="text-3xl font-bold text-[var(--color-text-primary)]">Big-O Made Simple</h2>
         <p className="mt-2 text-lg text-[var(--color-text-secondary)]">
@@ -226,17 +281,17 @@ function BigOStep({ onNext, onSkip }: StepProps) {
         </p>
       </div>
       <div className="mx-auto max-w-2xl">
-        <div className="flex items-stretch justify-center rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-secondary)] overflow-hidden">
+        <div className="flex items-stretch justify-center overflow-hidden rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-secondary)]">
           {complexities.map((c, i) => (
             <div
               key={c.label}
               className={cn(
-                'flex flex-1 flex-col items-center pt-6 pb-4 transition-colors',
+                'flex flex-1 flex-col items-center pb-4 pt-6 transition-colors',
                 i % 2 === 1 ? 'bg-[var(--color-bg-elevated)]/30' : 'bg-transparent',
               )}
             >
               <span className="text-xs font-medium text-[var(--color-text-muted)]">{c.name}</span>
-              <div className="flex h-[120px] w-full items-end justify-center mt-4 mb-2">
+              <div className="mb-2 mt-4 flex h-[120px] w-full items-end justify-center">
                 <div
                   className="w-full max-w-16 rounded-t-md transition-all"
                   style={
@@ -264,8 +319,8 @@ function BigOStep({ onNext, onSkip }: StepProps) {
   );
 }
 
-// Step 5: Try First Problem
-function TryFirstStep({ onSkip }: { onSkip: () => void }) {
+// Step 6: Try First Problem
+function TryFirstStep({ onSkip, stepKey }: { onSkip: () => void; stepKey: number }) {
   function handleStart() {
     localStorage.setItem('sophocode_onboarding_completed', 'true');
     window.location.href = '/practice';
@@ -273,6 +328,10 @@ function TryFirstStep({ onSkip }: { onSkip: () => void }) {
 
   return (
     <div className="space-y-6 text-center">
+      <SophiaBubble
+        text="That's everything you need to get started. I'll be right there with you — let's go."
+        stepKey={stepKey}
+      />
       <div>
         <h2 className="text-3xl font-bold text-[var(--color-text-primary)]">You&rsquo;re ready!</h2>
         <p className="mt-2 text-lg text-[var(--color-text-secondary)]">
@@ -333,11 +392,12 @@ export default function OnboardingPage() {
   if (!ready) return null;
 
   const stepComponents = [
-    <WelcomeStep key="welcome" onNext={handleNext} onSkip={handleSkip} />,
-    <InterviewTestStep key="interview" onNext={handleNext} onSkip={handleSkip} />,
-    <ProcessStep key="process" onNext={handleNext} onSkip={handleSkip} />,
-    <BigOStep key="bigo" onNext={handleNext} onSkip={handleSkip} />,
-    <TryFirstStep key="try" onSkip={handleSkip} />,
+    <MeetSophiaStep key="meet" onNext={handleNext} onSkip={handleSkip} stepKey={step} />,
+    <WelcomeStep key="welcome" onNext={handleNext} onSkip={handleSkip} stepKey={step} />,
+    <InterviewTestStep key="interview" onNext={handleNext} onSkip={handleSkip} stepKey={step} />,
+    <ProcessStep key="process" onNext={handleNext} onSkip={handleSkip} stepKey={step} />,
+    <BigOStep key="bigo" onNext={handleNext} onSkip={handleSkip} stepKey={step} />,
+    <TryFirstStep key="try" onSkip={handleSkip} stepKey={step} />,
   ];
 
   return (
