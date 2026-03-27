@@ -136,20 +136,22 @@ export function CoachingPanel({
                   className={cn('flex gap-2', isAssistant ? 'justify-start' : 'justify-end')}
                 >
                   {isAssistant && (
-                    <div className="flex flex-col gap-0.5">
+                    <div className="shrink-0">
                       {!avatarError ? (
-                        <Image
-                          src={SOPHIA_AVATAR}
-                          alt="Sophia"
-                          width={28}
-                          height={28}
-                          className="shrink-0 rounded-full"
-                          style={{ objectFit: 'cover', objectPosition: 'center' }}
-                          onError={() => setAvatarError(true)}
-                        />
+                        <div className="relative h-7 w-7 overflow-hidden rounded-full">
+                          <Image
+                            src={SOPHIA_AVATAR}
+                            alt="Sophia"
+                            fill
+                            sizes="28px"
+                            quality={90}
+                            style={{ objectFit: 'contain' }}
+                            onError={() => setAvatarError(true)}
+                          />
+                        </div>
                       ) : (
                         <div
-                          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold"
+                          className="flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold"
                           style={{ backgroundColor: config.colors.primary, color: '#fff' }}
                         >
                           S
@@ -185,15 +187,17 @@ export function CoachingPanel({
             {hintStream.text && (
               <div className="flex gap-2">
                 {!avatarError ? (
-                  <Image
-                    src={SOPHIA_AVATAR}
-                    alt="Sophia"
-                    width={28}
-                    height={28}
-                    className="shrink-0 rounded-full"
-                    style={{ objectFit: 'cover', objectPosition: 'center' }}
-                    onError={() => setAvatarError(true)}
-                  />
+                  <div className="relative h-7 w-7 shrink-0 overflow-hidden rounded-full">
+                    <Image
+                      src={SOPHIA_AVATAR}
+                      alt="Sophia"
+                      fill
+                      sizes="28px"
+                      quality={90}
+                      style={{ objectFit: 'contain' }}
+                      onError={() => setAvatarError(true)}
+                    />
+                  </div>
                 ) : (
                   <div
                     className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold"
