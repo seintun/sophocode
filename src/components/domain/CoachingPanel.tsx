@@ -144,6 +144,7 @@ export function CoachingPanel({
                           width={28}
                           height={28}
                           className="shrink-0 rounded-full"
+                          style={{ objectFit: 'cover', objectPosition: 'center' }}
                           onError={() => setAvatarError(true)}
                         />
                       ) : (
@@ -190,6 +191,7 @@ export function CoachingPanel({
                     width={28}
                     height={28}
                     className="shrink-0 rounded-full"
+                    style={{ objectFit: 'cover', objectPosition: 'center' }}
                     onError={() => setAvatarError(true)}
                   />
                 ) : (
