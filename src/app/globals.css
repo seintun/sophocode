@@ -39,6 +39,38 @@ body {
   color: var(--color-text-primary);
 }
 
+/* ── Interactive element baseline ────────────────────────────────────────── */
+@layer base {
+  a,
+  button,
+  [role='button'],
+  [role='menuitem'],
+  [role='tab'],
+  [role='option'],
+  [role='checkbox'],
+  [role='radio'],
+  [role='switch'],
+  label[for],
+  select,
+  summary {
+    cursor: pointer;
+  }
+
+  /* Subtle press/tap feedback — scale down slightly on active */
+  button:not(:disabled),
+  [role='button']:not([aria-disabled='true']),
+  [role='tab']:not([aria-disabled='true']) {
+    @apply active:scale-[0.97] transition-transform duration-75;
+  }
+
+  /* Disabled always shows not-allowed */
+  button:disabled,
+  [aria-disabled='true'],
+  [disabled] {
+    cursor: not-allowed;
+  }
+}
+
 @keyframes bar-grow {
   from {
     height: 0;
