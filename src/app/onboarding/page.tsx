@@ -86,8 +86,8 @@ function MeetSophiaStep({ onNext, onSkip }: StepProps) {
           </p>
         </div>
         <p className="mx-auto max-w-md text-lg text-[var(--color-text-secondary)]">
-          &ldquo;Hey, I&rsquo;m Sophia. Think of me as the senior engineer who sits next to you
-          &mdash; I won&rsquo;t solve it for you, but I&rsquo;ll never let you stay stuck
+          &ldquo;Hey, I&rsquo;m Sophia. Think of me as the senior engineer sitting right next to
+          you. I won&rsquo;t just hand you the answer, but I&rsquo;ll never let you stay stuck
           either.&rdquo;
         </p>
       </div>
@@ -127,7 +127,7 @@ function WelcomeStep({ onNext, onSkip, stepKey }: StepProps) {
   return (
     <div className="space-y-6 text-center">
       <SophiaBubble
-        text="First things first — where are you starting from? No wrong answer here."
+        text="First things first, where are you starting from? No wrong answer here."
         stepKey={stepKey}
       />
       <div>
@@ -156,10 +156,10 @@ function WelcomeStep({ onNext, onSkip, stepKey }: StepProps) {
 // Step 3: What Interviews Test
 function InterviewTestStep({ onNext, onSkip, stepKey }: StepProps) {
   const bullets = [
-    'Pattern recognition — spotting the underlying structure in a problem',
-    'Communication — explaining your thought process clearly',
-    'Complexity analysis — understanding time and space trade-offs',
-    'Edge case handling — thinking beyond the happy path',
+    'Pattern recognition: spotting the underlying structure in a problem',
+    'Communication: explaining your thought process clearly',
+    'Complexity analysis: understanding time and space trade-offs',
+    'Edge case handling: thinking beyond the happy path',
   ];
 
   return (
@@ -329,7 +329,7 @@ function TryFirstStep({ onSkip, stepKey }: { onSkip: () => void; stepKey: number
   return (
     <div className="space-y-6 text-center">
       <SophiaBubble
-        text="That's everything you need to get started. I'll be right there with you — let's go."
+        text="That's everything you need to get started. I'll be right there with you. Let's go."
         stepKey={stepKey}
       />
       <div>
