@@ -68,11 +68,11 @@ export function CoachingPanel({
   const nextHintLevel = Math.min(hintLevel + 1, 3);
   const canGetHint = hintLevel < 3 && mode !== 'MOCK_INTERVIEW';
 
-  const statusText = isLoading
-    ? hintStream.isLoading
-      ? config.vocabulary.generatingHint
-      : config.vocabulary.aiProcessing
-    : config.vocabulary.idle;
+  const statusText = hintStream.isLoading
+    ? config.vocabulary.generatingHint
+    : isLoading
+      ? config.vocabulary.aiProcessing
+      : config.vocabulary.idle;
 
   return (
     <div className="flex h-full flex-col">

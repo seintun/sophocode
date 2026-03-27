@@ -145,3 +145,13 @@ export const SOPHIA_MODES: Record<SessionMode, SophiaModeConfig> = {
 export function getSophiaConfig(mode: SessionMode): SophiaModeConfig {
   return SOPHIA_MODES[mode];
 }
+
+const VALID_MODES = new Set<string>(Object.keys(SOPHIA_MODES));
+
+export function isSessionMode(mode: unknown): mode is SessionMode {
+  return typeof mode === 'string' && VALID_MODES.has(mode);
+}
+
+export function getSophiaConfigSafe(mode: unknown): SophiaModeConfig | null {
+  return isSessionMode(mode) ? SOPHIA_MODES[mode] : null;
+}

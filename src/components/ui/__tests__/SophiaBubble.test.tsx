@@ -13,7 +13,7 @@ describe('SophiaBubble', () => {
 
   it('renders the bubble container on mount', () => {
     render(<SophiaBubble text="Hello" stepKey={0} />);
-    expect(screen.getByRole('status')).toBeInTheDocument();
+    expect(screen.getByRole('region')).toBeInTheDocument();
   });
 
   it('reveals text character by character', () => {
@@ -39,7 +39,7 @@ describe('SophiaBubble', () => {
   it('click-to-skip shows full text immediately', () => {
     render(<SophiaBubble text="Hello there" stepKey={0} />);
     act(() => {
-      fireEvent.click(screen.getByRole('status'));
+      fireEvent.click(screen.getByRole('region'));
     });
     expect(screen.getByTestId('sophia-displayed').textContent).toContain('Hello there');
   });

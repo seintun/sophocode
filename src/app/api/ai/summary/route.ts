@@ -3,6 +3,7 @@ import { openrouter } from '@/lib/ai/provider';
 import { MODELS } from '@/lib/ai/models';
 import { buildSummaryPrompt } from '@/lib/ai/prompts/summary';
 import { handleApiError } from '@/lib/errors/api';
+import { isSessionMode } from '@/lib/sophia';
 
 export async function POST(req: Request): Promise<Response> {
   try {
@@ -31,7 +32,7 @@ export async function POST(req: Request): Promise<Response> {
       testResults,
       hintsUsed,
       timeSpentSeconds,
-      mode,
+      mode: isSessionMode(mode) ? mode : undefined,
     });
 
     const result = streamText({

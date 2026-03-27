@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { SOPHIA_AVATAR, SOPHIA_MODES } from '@/lib/sophia';
 
 const { colors } = SOPHIA_MODES.SELF_PRACTICE;
@@ -14,19 +14,32 @@ interface SophiaBubbleProps {
 export function SophiaBubble({ text, stepKey }: SophiaBubbleProps) {
   const [displayed, setDisplayed] = useState('');
   const [avatarError, setAvatarError] = useState(false);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     setDisplayed('');
     let i = 0;
-    const id = setInterval(() => {
+    intervalRef.current = setInterval(() => {
       i++;
       setDisplayed(text.slice(0, i));
-      if (i >= text.length) clearInterval(id);
+      if (i >= text.length) {
+        if (intervalRef.current) clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
     }, CHAR_DELAY_MS);
-    return () => clearInterval(id);
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    };
   }, [text, stepKey]);
 
-  const skip = useCallback(() => setDisplayed(text), [text]);
+  const skip = useCallback(() => {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+    setDisplayed(text);
+  }, [text]);
 
   return (
     <div className="mb-6 flex items-start gap-3">
@@ -64,11 +77,18 @@ export function SophiaBubble({ text, stepKey }: SophiaBubbleProps) {
         />
         {/* Invisible full text reserves the exact final height — no layout shift */}
         <div
-          role="status"
+          role="region"
           aria-live="polite"
           aria-label="Sophia says"
+          tabIndex={0}
           onClick={skip}
-          className="relative cursor-pointer rounded-lg px-4 py-3 text-sm leading-relaxed"
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              skip();
+            }
+          }}
+          className="relative cursor-pointer rounded-lg px-4 py-3 text-sm leading-relaxed outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]/50"
           style={{
             backgroundColor: colors.bg,
             borderLeft: `2px solid ${colors.primary}`,

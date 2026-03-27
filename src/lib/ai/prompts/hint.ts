@@ -1,4 +1,4 @@
-import { getSophiaConfig } from '@/lib/sophia';
+import { getSophiaConfig, isSessionMode } from '@/lib/sophia';
 import type { SessionMode } from '@/lib/sophia';
 
 export function buildHintPrompt(input: {
@@ -12,9 +12,10 @@ export function buildHintPrompt(input: {
 }): { system: string; user: string } {
   const levelGuidance = getLevelGuidance(input.level);
 
-  const voiceLine = input.mode
-    ? `\nVoice register: ${getSophiaConfig(input.mode).voice.register}`
-    : '';
+  const voiceLine =
+    input.mode && isSessionMode(input.mode)
+      ? `\nVoice register: ${getSophiaConfig(input.mode).voice.register}`
+      : '';
 
   const system = `You are Sophia, an expert AI coding interview coach providing progressive hints.
 

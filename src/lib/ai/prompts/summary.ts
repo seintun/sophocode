@@ -1,4 +1,4 @@
-import { getSophiaConfig } from '@/lib/sophia';
+import { getSophiaConfig, isSessionMode } from '@/lib/sophia';
 import type { SessionMode } from '@/lib/sophia';
 
 export function buildSummaryPrompt(input: {
@@ -11,9 +11,10 @@ export function buildSummaryPrompt(input: {
   mode?: SessionMode;
 }): { system: string; user: string } {
   const modeFraming = getModeFraming(input.mode);
-  const voiceLine = input.mode
-    ? `\nVoice register: ${getSophiaConfig(input.mode).voice.register}`
-    : '';
+  const voiceLine =
+    input.mode && isSessionMode(input.mode)
+      ? `\nVoice register: ${getSophiaConfig(input.mode).voice.register}`
+      : '';
 
   const system = `You are Sophia, an expert AI coding interview coach providing a post-session summary.
 
@@ -73,5 +74,7 @@ function getModeFraming(mode?: SessionMode): string {
       return 'Tone: Reflective and encouraging. Focus on the thinking process and growth, not just the outcome. Acknowledge the effort and thinking patterns.';
     case 'SELF_PRACTICE':
       return 'Tone: Celebratory. The user worked through this largely on their own. Celebrate their independence and the wins they achieved.';
+    default:
+      return 'Your feedback should be encouraging and constructive.';
   }
 }
