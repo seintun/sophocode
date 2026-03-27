@@ -68,7 +68,9 @@ export function SessionLayout({ problem, editor, testResults, coach }: SessionLa
             aria-labelledby="tab-problem"
             hidden={activeTab !== 'problem'}
           >
-            {activeTab === 'problem' && problem}
+            {activeTab === 'problem' && (
+              <div style={{ animation: 'fadeIn 0.15s ease-out' }}>{problem}</div>
+            )}
           </div>
           <div
             role="tabpanel"
@@ -77,7 +79,7 @@ export function SessionLayout({ problem, editor, testResults, coach }: SessionLa
             hidden={activeTab !== 'code'}
           >
             {activeTab === 'code' && (
-              <div className="flex h-full flex-col">
+              <div className="flex h-full flex-col" style={{ animation: 'fadeIn 0.15s ease-out' }}>
                 <div className="flex-1 min-h-[18.75rem]">{editor}</div>
                 <div className="border-t border-[var(--color-border)] min-h-[9.375rem] max-h-[40vh] overflow-y-auto">
                   {testResults}
@@ -91,7 +93,9 @@ export function SessionLayout({ problem, editor, testResults, coach }: SessionLa
             aria-labelledby="tab-coach"
             hidden={activeTab !== 'coach'}
           >
-            {activeTab === 'coach' && coach}
+            {activeTab === 'coach' && (
+              <div style={{ animation: 'fadeIn 0.15s ease-out' }}>{coach}</div>
+            )}
           </div>
         </div>
       </div>

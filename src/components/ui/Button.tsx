@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 
 const variantStyles = {
   primary:
-    'bg-[var(--color-accent)] text-[var(--color-bg-primary)] hover:bg-[var(--color-accent-hover)]',
+    'bg-[var(--color-accent)] text-[var(--color-bg-primary)] hover:bg-[var(--color-accent-hover)] hover:shadow-[0_0_16px_-4px_var(--color-accent)]',
   secondary:
     'bg-[var(--color-bg-elevated)] text-[var(--color-text-primary)] hover:bg-[var(--color-bg-secondary)]',
   ghost: 'bg-transparent text-[var(--color-text-primary)] hover:bg-[var(--color-bg-secondary)]',
