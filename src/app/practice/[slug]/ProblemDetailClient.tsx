@@ -142,10 +142,14 @@ function ProblemDetailContent({
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
-      <div className="mb-6 flex items-center gap-3">
-        <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">{problem.title}</h1>
-        <Badge variant="difficulty" value={difficultyLabel} />
-        <Badge variant="pattern" value={formatPattern(problem.pattern)} />
+      <div className="mb-6">
+        <h1 className="mb-2 text-2xl font-bold text-[var(--color-text-primary)]">
+          {problem.title}
+        </h1>
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge variant="difficulty" value={difficultyLabel} />
+          <Badge variant="pattern" value={formatPattern(problem.pattern)} />
+        </div>
       </div>
 
       <div className="mb-8">
@@ -213,7 +217,7 @@ function ProblemDetailContent({
               >
                 {/* Mobile: image left, text right. sm+: image top, text below */}
                 <div className="flex flex-row sm:flex-col">
-                  <div className="relative h-24 w-24 shrink-0 sm:h-36 sm:w-full overflow-hidden">
+                  <div className="relative h-28 w-28 shrink-0 sm:h-36 sm:w-full overflow-hidden">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={MODE_IMAGES[mode.id]}
