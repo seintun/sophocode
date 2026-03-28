@@ -152,6 +152,12 @@ function SessionContent({ session, sessionId }: { session: SessionData; sessionI
 
   const { run: runTests, results: testRunResults, isRunning } = useCodeExecution();
 
+  const functionName = useMemo(() => {
+    if (!session?.problem.starterCode) return null;
+    const match = session.problem.starterCode.match(/def\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\(/);
+    return match ? match[1] : null;
+  }, [session?.problem.starterCode]);
+
   const problemContext = {
     title: session.problem.title,
     statement: session.problem.statement,
@@ -216,34 +222,39 @@ function SessionContent({ session, sessionId }: { session: SessionData; sessionI
       setPyodideReady(true);
     }
 
-    const testCases = session.problem.testCases.map((tc) => ({
-      input: tc.input,
-      expected: tc.expected,
-      isHidden: tc.isHidden,
-    }));
-    const result = await runTests(code, testCases);
-    setPyodideLoading(false);
-    setShowFailureButton(true);
+    try {
+      const testCases = session.problem.testCases.map((tc) => ({
+        input: tc.input,
+        expected: tc.expected,
+        isHidden: tc.isHidden,
+      }));
+      const result = await runTests(code, testCases, functionName);
+      setShowFailureButton(true);
 
-    // Save test run results using the returned result directly
-    if (result) {
-      try {
-        await fetch('/api/runs', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            sessionId,
-            code,
-            results: result.results,
-            passed: result.passed,
-            total: result.total,
-          }),
-        });
-      } catch {
-        // Non-critical
+      // Save test run results using the returned result directly
+      if (result) {
+        try {
+          await fetch('/api/runs', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              sessionId,
+              code,
+              results: result.results,
+              passed: result.passed,
+              total: result.total,
+            }),
+          });
+        } catch (saveErr) {
+          console.warn('[SessionPage] Failed to persist test run:', saveErr);
+        }
       }
+    } catch (err) {
+      console.error('[SessionPage] handleRunTests failed:', err);
+    } finally {
+      setPyodideLoading(false);
     }
-  }, [session, code, runTests, sessionId, pyodideReady]);
+  }, [session, code, runTests, sessionId, pyodideReady, functionName]);
 
   const handleAskAboutFailure = useCallback(
     (failedSummary: string) => {

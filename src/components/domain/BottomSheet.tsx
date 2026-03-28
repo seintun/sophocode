@@ -8,14 +8,12 @@ import {
   useRef,
   useState,
   type FC,
-  type PointerEvent as ReactPointerEvent,
   type ReactNode,
 } from 'react';
+import { useBottomSheetDrag, type SheetHeight } from '@/hooks/useBottomSheetDrag';
 import { cn } from '@/lib/utils';
 
 // ── Types ────────────────────────────────────────────────────────────────────
-
-type SheetHeight = 'peek' | 'half' | 'large' | 'full';
 
 interface BottomSheetProps {
   open: boolean;
@@ -52,6 +50,7 @@ const ANIMATION_MS = 300;
 
 /** Resolve a vh string like "40vh" to pixel value. */
 function vhToPx(vh: string): number {
+  if (typeof window === 'undefined') return 0;
   return (parseFloat(vh) / 100) * window.innerHeight;
 }
 
@@ -67,11 +66,6 @@ export const BottomSheet: FC<BottomSheetProps> = ({
 }) => {
   const sheetRef = useRef<HTMLDivElement>(null);
   const backdropRef = useRef<HTMLDivElement>(null);
-
-  // Drag state (refs — no re-renders during drag)
-  const pointerStartY = useRef(0);
-  const isDragging = useRef(false);
-  const animating = useRef(false);
 
   /**
    * Internal mounted state. We keep the DOM alive during the close animation
@@ -96,6 +90,22 @@ export const BottomSheet: FC<BottomSheetProps> = ({
 
   const transitionStyle = reducedMotion ? 'none' : TRANSITION;
   const animDuration = reducedMotion ? 0 : ANIMATION_MS;
+
+  // ── Drag Logic Hook ────────────────────────────────────────────────────
+  const { onPointerDown, onPointerMove, onPointerUp, animatingRef } = useBottomSheetDrag({
+    currentHeight,
+    setCurrentHeight,
+    height,
+    onClose,
+    snapHeights: SNAP_HEIGHTS,
+    animDuration,
+    transitionStyle,
+    reducedMotion,
+    sheetRef,
+    backdropRef,
+    closeThresholdFraction: CLOSE_THRESHOLD_FRACTION,
+    vhToPx,
+  });
 
   // ── Lock body scroll while mounted ─────────────────────────────────────
   useEffect(() => {
@@ -154,13 +164,13 @@ export const BottomSheet: FC<BottomSheetProps> = ({
       sheet.style.transform = `translateY(${CLOSED_TRANSLATE})`;
       backdrop.style.opacity = '0';
 
-      animating.current = true;
+      animatingRef.current = true;
       closeTimerRef.current = setTimeout(() => {
-        animating.current = false;
+        animatingRef.current = false;
         setMounted(false);
       }, animDuration);
     }
-  }, [open, height, currentHeight, transitionStyle, reducedMotion, animDuration, mounted]);
+  }, [open, height, currentHeight, transitionStyle, reducedMotion, animDuration, mounted, onClose]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -169,137 +179,9 @@ export const BottomSheet: FC<BottomSheetProps> = ({
     };
   }, []);
 
-  // ── Read current translateY from computed style ────────────────────────
-
-  const dragStartHeightPx = useRef(0);
-  const dragMaxHeightPx = useRef(0);
-
-  const onPointerDown = useCallback(
-    (e: ReactPointerEvent<HTMLDivElement>) => {
-      const target = e.target as HTMLElement | null;
-      if (!target || !target.closest('[data-bottomsheet-drag="true"]')) {
-        return;
-      }
-
-      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
-        return;
-      }
-
-      if (animating.current) return;
-      const sheet = sheetRef.current;
-      if (!sheet) return;
-
-      isDragging.current = true;
-      pointerStartY.current = e.clientY;
-
-      const currentH = vhToPx(SNAP_HEIGHTS[currentHeight]);
-      const maxH = vhToPx(SNAP_HEIGHTS.full);
-      dragStartHeightPx.current = currentH;
-      dragMaxHeightPx.current = maxH;
-
-      // Prepare for transform-only drag:
-      // 1. Set height to max potential (to avoid layout changes later)
-      // 2. Set translateY to hide the extra height
-      sheet.style.transition = 'none';
-      sheet.style.height = `${maxH}px`;
-      sheet.style.transform = `translateY(${maxH - currentH}px)`;
-
-      if (backdropRef.current) {
-        backdropRef.current.style.transition = 'none';
-      }
-
-      const dragTarget = e.currentTarget as HTMLDivElement;
-      dragTarget.setPointerCapture(e.pointerId);
-    },
-    [currentHeight],
-  );
-
-  const onPointerMove = useCallback(
-    (e: ReactPointerEvent<HTMLDivElement>) => {
-      if (!isDragging.current) return;
-      const sheet = sheetRef.current;
-      if (!sheet) return;
-
-      const deltaY = pointerStartY.current - e.clientY; // positive = dragging up
-      const targetHeight = dragStartHeightPx.current + deltaY;
-
-      // Clamp
-      const clampedHeight = Math.max(0, Math.min(targetHeight, dragMaxHeightPx.current));
-      const translatePx = dragMaxHeightPx.current - clampedHeight;
-
-      sheet.style.transform = `translateY(${translatePx}px)`;
-
-      if (backdropRef.current) {
-        const baseH = vhToPx(SNAP_HEIGHTS[height]);
-        const progress = Math.min(Math.max(clampedHeight / baseH, 0), 1);
-        backdropRef.current.style.opacity = String(progress);
-      }
-    },
-    [height],
-  );
-
-  const onPointerUp = useCallback(
-    (e: ReactPointerEvent<HTMLDivElement>) => {
-      if (!isDragging.current) return;
-      isDragging.current = false;
-
-      const sheet = sheetRef.current;
-      if (!sheet) return;
-
-      const dragTarget = e.currentTarget as HTMLDivElement;
-      dragTarget.releasePointerCapture(e.pointerId);
-
-      const deltaY = pointerStartY.current - e.clientY;
-      const endHeight = dragStartHeightPx.current + deltaY;
-
-      const baseH = vhToPx(SNAP_HEIGHTS[height]);
-      const fullH = vhToPx(SNAP_HEIGHTS.full);
-
-      sheet.style.transition = transitionStyle;
-      if (backdropRef.current) {
-        backdropRef.current.style.transition = reducedMotion ? 'none' : 'opacity 0.3s ease';
-      }
-
-      // Snap logic
-      if (endHeight < baseH - baseH * CLOSE_THRESHOLD_FRACTION) {
-        // Close
-        sheet.style.transform = `translateY(${dragMaxHeightPx.current}px)`;
-        if (backdropRef.current) backdropRef.current.style.opacity = '0';
-        animating.current = true;
-        setTimeout(() => {
-          animating.current = false;
-          onClose();
-        }, animDuration);
-      } else if (endHeight > baseH + (fullH - baseH) * 0.25) {
-        // Expand to full
-        setCurrentHeight('full');
-        sheet.style.transform = `translateY(0px)`;
-        if (backdropRef.current) backdropRef.current.style.opacity = '1';
-        animating.current = true;
-        setTimeout(() => {
-          animating.current = false;
-          sheet.style.height = SNAP_HEIGHTS.full;
-        }, animDuration);
-      } else {
-        // Snap back to base
-        setCurrentHeight(height);
-        const targetTranslate = dragMaxHeightPx.current - baseH;
-        sheet.style.transform = `translateY(${targetTranslate}px)`;
-        if (backdropRef.current) backdropRef.current.style.opacity = '1';
-        animating.current = true;
-        setTimeout(() => {
-          animating.current = false;
-          sheet.style.height = SNAP_HEIGHTS[height];
-          sheet.style.transform = 'translateY(0px)';
-        }, animDuration);
-      }
-    },
-    [height, onClose, reducedMotion, transitionStyle, animDuration],
-  );
-
   // ── Backdrop click → dismiss ───────────────────────────────────────────
   const onBackdropClick = useCallback(() => {
-    if (animating.current) return;
+    if (animatingRef.current) return;
     onClose();
   }, [onClose]);
 

@@ -11,9 +11,11 @@ export function AIBanner() {
       try {
         const res = await fetch('/api/ai/health');
         if (res.status === 503 || res.status === 500) {
+          console.warn('[AIBanner] AI health check failed:', res.status);
           setDegraded(true);
         }
-      } catch {
+      } catch (err) {
+        console.warn('[AIBanner] AI health check error:', err);
         setDegraded(true);
       }
     }
