@@ -8,6 +8,7 @@ import { ProblemPanel } from '@/components/domain/ProblemPanel';
 import { CodeEditor } from '@/components/domain/CodeEditor';
 import { TestResults } from '@/components/domain/TestResults';
 import { CoachingPanel } from '@/components/domain/CoachingPanel';
+import { SessionTimer } from '@/components/domain/SessionTimer';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { AIBanner } from '@/components/ui/AIBanner';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
@@ -43,6 +44,7 @@ interface SessionData {
     starterCode: string;
     testCases: TestCase[];
   };
+  startedAt: string;
   runs: Array<{
     id: string;
     code: string;
@@ -394,10 +396,14 @@ function SessionContent({ session, sessionId }: { session: SessionData; sessionI
     <div className="flex h-[calc(100vh-57px)] flex-col">
       <AIBanner />
       <div className="flex items-center justify-between border-b border-[var(--color-border)] bg-[var(--color-bg-secondary)] px-3 py-1 md:px-4 md:py-2">
-        <span className="text-sm font-medium text-[var(--color-text-primary)] truncate max-w-[40%] md:max-w-none">
-          {session.problem.title}
-        </span>
-        <div className="flex items-center gap-2 md:gap-3">
+        <div className="flex flex-1 items-center justify-between min-w-0 px-2 md:px-0">
+          <span className="text-sm font-medium text-[var(--color-text-primary)] truncate max-w-[140px] sm:max-w-[200px] md:max-w-none">
+            {session.problem.title}
+          </span>
+          <SessionTimer startTime={session.startedAt} className="ml-2 shrink-0" />
+        </div>
+
+        <div className="flex items-center gap-2 md:gap-3 ml-2">
           <div className="hidden items-center md:flex">
             <button
               onClick={handleRunTests}
