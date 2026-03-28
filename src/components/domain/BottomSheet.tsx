@@ -125,10 +125,25 @@ export const BottomSheet: FC<BottomSheetProps> = ({
     setMounted(true);
   }
 
+  const prevOpenRef = useRef(open);
+
   useLayoutEffect(() => {
     const sheet = sheetRef.current;
     const backdrop = backdropRef.current;
     if (!sheet || !backdrop) return;
+
+    // Skip if open state hasn't changed
+    if (prevOpenRef.current === open) {
+      // Still need to handle height changes when already open
+      if (open && currentHeight !== height) {
+        setCurrentHeight(height);
+        sheet.style.transition = transitionStyle;
+        sheet.style.height = SNAP_HEIGHTS[height];
+      }
+      return;
+    }
+
+    prevOpenRef.current = open;
 
     // Clear any pending close timer from a previous cycle
     if (closeTimerRef.current) {
@@ -178,7 +193,6 @@ export const BottomSheet: FC<BottomSheetProps> = ({
     reducedMotion,
     animDuration,
     mounted,
-    onClose,
     animatingRef,
   ]);
 

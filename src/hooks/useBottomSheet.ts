@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 export function useKeyboardHeight() {
   const [keyboardHeight, setKeyboardHeight] = useState(0);
@@ -39,14 +39,19 @@ export function useBottomSheet(initialHeight: BottomSheetHeight = 'closed') {
     setHeight((prev) => (prev === 'closed' ? 'peek' : 'closed'));
   }, []);
 
-  return {
-    height,
-    setHeight,
-    isOpen: height !== 'closed',
-    open,
-    close,
-    toggle,
-  };
+  const result = useMemo(
+    () => ({
+      height,
+      setHeight,
+      isOpen: height !== 'closed',
+      open,
+      close,
+      toggle,
+    }),
+    [height, open, close, toggle],
+  );
+
+  return result;
 }
 
 export function useImmersiveMode() {
@@ -55,5 +60,10 @@ export function useImmersiveMode() {
   const enterImmersive = useCallback(() => setIsImmersive(true), []);
   const exitImmersive = useCallback(() => setIsImmersive(false), []);
 
-  return { isImmersive, enterImmersive, exitImmersive };
+  const result = useMemo(
+    () => ({ isImmersive, enterImmersive, exitImmersive }),
+    [isImmersive, enterImmersive, exitImmersive],
+  );
+
+  return result;
 }

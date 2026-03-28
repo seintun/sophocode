@@ -48,7 +48,8 @@ export function CoachingPanel({
   const canChat = mode === 'COACH_ME' || mode === 'MOCK_INTERVIEW';
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    // Behavior 'auto' is much less jittery than 'smooth' when updating frequently (streaming)
+    messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
   }, [messages, hintStream.text]);
 
   const handleSubmit = (e: React.FormEvent) => {
