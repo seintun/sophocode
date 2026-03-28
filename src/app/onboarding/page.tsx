@@ -434,7 +434,7 @@ export default function OnboardingPage() {
   ];
 
   return (
-    <div className="flex min-h-[calc(100vh-57px)] flex-col items-center justify-start overflow-y-auto bg-[var(--color-bg-primary)] px-4 py-6 sm:justify-center sm:py-12">
+    <div className="flex min-h-[calc(100dvh-57px)] flex-col items-center justify-start overflow-y-auto bg-[var(--color-bg-primary)] px-4 py-6 sm:justify-center sm:py-12">
       <div
         key={step}
         className="w-full animate-[fadeIn_0.3s_ease-out]"

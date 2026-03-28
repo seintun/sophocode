@@ -47,7 +47,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-[80vh] items-center justify-center px-4">
+    <div className="flex min-h-[80dvh] items-center justify-center px-4">
       <Card className="w-full max-w-md">
         <h1 className="mb-1 text-2xl font-bold text-[var(--color-text-primary)]">
           Sign in to sophocode
