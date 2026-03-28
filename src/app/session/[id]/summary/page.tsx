@@ -82,7 +82,7 @@ export default function SessionSummaryPage() {
 
   if (error || !data) {
     return (
-      <div className="flex h-[calc(100vh-57px)] items-center justify-center">
+      <div className="flex h-[calc(100dvh-57px)] items-center justify-center">
         <div className="text-center">
           <p className="mb-2 text-lg text-[var(--color-error)]">{error ?? 'Session not found'}</p>
           <Link href="/practice" className="text-sm text-[var(--color-accent)] hover:underline">

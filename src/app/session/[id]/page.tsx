@@ -90,7 +90,7 @@ export default function SessionPage() {
 
   if (loading) {
     return (
-      <div className="h-[calc(100vh-57px)]" aria-busy="true" aria-live="polite">
+      <div className="h-[calc(100dvh-57px)]" aria-busy="true" aria-live="polite">
         <div className="hidden h-full md:grid md:grid-cols-[30%_40%_30%]">
           <div className="border-r border-[var(--color-border)] p-4">
             <Skeleton className="mb-4 h-8 w-3/4" aria-label="Loading problem panel" />
@@ -125,7 +125,7 @@ export default function SessionPage() {
 
   if (error || !session) {
     return (
-      <div className="flex h-[calc(100vh-57px)] items-center justify-center">
+      <div className="flex h-[calc(100dvh-57px)] items-center justify-center">
         <div className="text-center">
           <p className="mb-2 text-lg text-[var(--color-error)]">{error ?? 'Session not found'}</p>
           <Link href="/practice" className="text-sm text-[var(--color-accent)] hover:underline">
@@ -409,7 +409,7 @@ function SessionContent({ session, sessionId }: { session: SessionData; sessionI
 
   if (error) {
     return (
-      <div className="flex h-[calc(100vh-57px)] items-center justify-center">
+      <div className="flex h-[calc(100dvh-57px)] items-center justify-center">
         <div className="text-center">
           <p className="mb-2 text-lg text-[var(--color-error)]">{error}</p>
           <Link href="/practice" className="text-sm text-[var(--color-accent)] hover:underline">
@@ -421,7 +421,7 @@ function SessionContent({ session, sessionId }: { session: SessionData; sessionI
   }
 
   return (
-    <div className="flex h-[calc(100vh-57px)] flex-col">
+    <div className="flex h-[calc(100dvh-57px)] flex-col">
       <AIBanner />
       <div className="flex items-center justify-between border-b border-[var(--color-border)] bg-[var(--color-bg-secondary)] px-3 py-1 md:px-4 md:py-2">
         <div className="flex flex-1 items-center justify-between min-w-0 px-2 md:px-0">
