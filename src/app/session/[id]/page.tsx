@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { SessionLayout } from '@/components/domain/SessionLayout';
@@ -319,6 +319,93 @@ function SessionContent({ session, sessionId }: { session: SessionData; sessionI
   const totalCount = testRunResults?.total ?? session.runs[0]?.total ?? 0;
   const hasFailures = showFailureButton && passedCount < totalCount;
 
+  const problemPanel = useMemo(
+    () => (
+      <ProblemPanel
+        problem={{
+          title: session.problem.title,
+          statement: session.problem.statement,
+          examples,
+          constraints: session.problem.constraints,
+          pattern: session.problem.pattern,
+          difficulty: session.problem.difficulty,
+        }}
+        notes={notes}
+        onNotesChange={setNotes}
+        mode={session.mode}
+        explanationStream={explanationStream}
+        getExplanation={getExplanation}
+      />
+    ),
+    [session, examples, notes, explanationStream, getExplanation],
+  );
+
+  const editorPanel = useMemo(
+    () => (
+      <div className="flex h-full flex-col">
+        <div className="hidden md:flex items-center gap-2 border-b border-[var(--color-border)] px-4 py-2">
+          <button
+            onClick={handleRunTests}
+            disabled={isRunning}
+            aria-label="Run tests (Ctrl+Enter)"
+            className="rounded-lg bg-[var(--color-accent)] px-4 py-1.5 text-sm font-medium text-[var(--color-bg-primary)] transition-colors hover:bg-[var(--color-accent-hover)] disabled:opacity-50"
+          >
+            {isRunning ? 'Running...' : 'Run Tests'}
+          </button>
+          {pyodideLoading && (
+            <span className="flex items-center gap-2 text-xs text-[var(--color-text-muted)]">
+              <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-[var(--color-accent)] border-t-transparent" />
+              Preparing Python environment...
+            </span>
+          )}
+        </div>
+        <div className="flex-1 min-h-0">
+          <CodeEditor value={code} onChange={handleCodeChange} onFocus={() => {}} onBlur={() => {}} />
+        </div>
+      </div>
+    ),
+    [handleRunTests, isRunning, pyodideLoading, code, handleCodeChange],
+  );
+
+  const testResultsPanel = useMemo(
+    () => (
+      <TestResults
+        results={displayResults}
+        passedCount={passedCount}
+        totalCount={totalCount}
+        onAskAboutFailure={hasFailures ? handleAskAboutFailure : undefined}
+      />
+    ),
+    [displayResults, passedCount, totalCount, hasFailures, handleAskAboutFailure],
+  );
+
+  const coachingPanel = useMemo(
+    () => (
+      <CoachingPanel
+        mode={session.mode}
+        messages={messages}
+        onSendMessage={sendChat}
+        isLoading={aiLoading || hintStream.isLoading}
+        hintStream={hintStream}
+        onHintRequest={handleHintRequest}
+        hintLevel={hintLevel}
+        onAskAboutFailure={hasFailures ? () => handleAskAboutFailure('') : undefined}
+        showFailureButton={hasFailures}
+      />
+    ),
+    [
+      session.mode,
+      messages,
+      sendChat,
+      aiLoading,
+      hintStream,
+      handleHintRequest,
+      hintLevel,
+      hasFailures,
+      handleAskAboutFailure,
+    ],
+  );
+
   return (
     <div className="flex h-[calc(100vh-57px)] flex-col">
       <AIBanner />
@@ -349,72 +436,10 @@ function SessionContent({ session, sessionId }: { session: SessionData; sessionI
             workspaceRef={workspaceRef}
             onRunTests={handleRunTests}
             isRunning={isRunning || pyodideLoading}
-            problem={
-              <ProblemPanel
-                problem={{
-                  title: session.problem.title,
-                  statement: session.problem.statement,
-                  examples,
-                  constraints: session.problem.constraints,
-                  pattern: session.problem.pattern,
-                  difficulty: session.problem.difficulty,
-                }}
-                notes={notes}
-                onNotesChange={setNotes}
-                mode={session.mode}
-                explanationStream={explanationStream}
-                getExplanation={getExplanation}
-              />
-            }
-            editor={
-              <div className="flex h-full flex-col">
-                <div className="hidden md:flex items-center gap-2 border-b border-[var(--color-border)] px-4 py-2">
-                  <button
-                    onClick={handleRunTests}
-                    disabled={isRunning}
-                    aria-label="Run tests (Ctrl+Enter)"
-                    className="rounded-lg bg-[var(--color-accent)] px-4 py-1.5 text-sm font-medium text-[var(--color-bg-primary)] transition-colors hover:bg-[var(--color-accent-hover)] disabled:opacity-50"
-                  >
-                    {isRunning ? 'Running...' : 'Run Tests'}
-                  </button>
-                  {pyodideLoading && (
-                    <span className="flex items-center gap-2 text-xs text-[var(--color-text-muted)]">
-                      <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-[var(--color-accent)] border-t-transparent" />
-                      Preparing Python environment...
-                    </span>
-                  )}
-                </div>
-                <div className="flex-1 min-h-0">
-                  <CodeEditor
-                    value={code}
-                    onChange={handleCodeChange}
-                    onFocus={() => {}}
-                    onBlur={() => {}}
-                  />
-                </div>
-              </div>
-            }
-            testResults={
-              <TestResults
-                results={displayResults}
-                passedCount={passedCount}
-                totalCount={totalCount}
-                onAskAboutFailure={hasFailures ? handleAskAboutFailure : undefined}
-              />
-            }
-            coach={
-              <CoachingPanel
-                mode={session.mode}
-                messages={messages}
-                onSendMessage={sendChat}
-                isLoading={aiLoading || hintStream.isLoading}
-                hintStream={hintStream}
-                onHintRequest={handleHintRequest}
-                hintLevel={hintLevel}
-                onAskAboutFailure={hasFailures ? () => handleAskAboutFailure('') : undefined}
-                showFailureButton={hasFailures}
-              />
-            }
+            problem={problemPanel}
+            editor={editorPanel}
+            testResults={testResultsPanel}
+            coach={coachingPanel}
             testResultsData={
               testRunResults
                 ? { passed: testRunResults.passed, total: testRunResults.total }

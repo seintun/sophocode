@@ -176,6 +176,23 @@ export const MobileWorkspace = forwardRef<MobileWorkspaceHandle, MobileWorkspace
     const dismissPillTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const autoCollapseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+    // ── Lazy mounting ──────────────────────────────────────────────────────
+    const [hasOpenedProblem, setHasOpenedProblem] = useState(false);
+    const [hasOpenedResults, setHasOpenedResults] = useState(false);
+    const [hasOpenedCoach, setHasOpenedCoach] = useState(false);
+
+    useEffect(() => {
+      if (problemSheet.isOpen) setHasOpenedProblem(true);
+    }, [problemSheet.isOpen]);
+
+    useEffect(() => {
+      if (testResultsSheet.isOpen) setHasOpenedResults(true);
+    }, [testResultsSheet.isOpen]);
+
+    useEffect(() => {
+      if (coachSheet.isOpen) setHasOpenedCoach(true);
+    }, [coachSheet.isOpen]);
+
     // ── Derived state ───────────────────────────────────────────────────────
 
     // ── Swipe navigation ────────────────────────────────────────────────────
@@ -347,29 +364,40 @@ export const MobileWorkspace = forwardRef<MobileWorkspaceHandle, MobileWorkspace
         </div>
 
         {/* ── Problem Bottom Sheet (z:10) ────────────────────────────────── */}
-        <BottomSheet
-          open={problemSheet.isOpen}
-          height="large"
-          zIndex={10}
-          onClose={problemSheet.close}
-        >
-          <div className={cn('h-full', !isImmersive && 'pb-12')}>{problem}</div>
-        </BottomSheet>
+        {(hasOpenedProblem || activeTab === 'problem') && (
+          <BottomSheet
+            open={problemSheet.isOpen}
+            height="large"
+            zIndex={10}
+            onClose={problemSheet.close}
+          >
+            <div className={cn('h-full', !isImmersive && 'pb-12')}>{problem}</div>
+          </BottomSheet>
+        )}
 
         {/* ── Test Results Bottom Sheet (z:20, draggable) ────────────────── */}
-        <BottomSheet
-          open={testResultsSheet.isOpen}
-          height="large"
-          zIndex={20}
-          onClose={testResultsSheet.close}
-        >
-          <div className={cn('h-full', !isImmersive && 'pb-12')}>{testResults}</div>
-        </BottomSheet>
+        {hasOpenedResults && (
+          <BottomSheet
+            open={testResultsSheet.isOpen}
+            height="large"
+            zIndex={20}
+            onClose={testResultsSheet.close}
+          >
+            <div className={cn('h-full', !isImmersive && 'pb-12')}>{testResults}</div>
+          </BottomSheet>
+        )}
 
         {/* ── Coach Bottom Sheet (z:30, 50vh) ────────────────────────────── */}
-        <BottomSheet open={coachSheet.isOpen} height="large" zIndex={30} onClose={coachSheet.close}>
-          <div className={cn('h-full', !isImmersive && 'pb-12')}>{coach}</div>
-        </BottomSheet>
+        {hasOpenedCoach && (
+          <BottomSheet
+            open={coachSheet.isOpen}
+            height="large"
+            zIndex={30}
+            onClose={coachSheet.close}
+          >
+            <div className={cn('h-full', !isImmersive && 'pb-12')}>{coach}</div>
+          </BottomSheet>
+        )}
 
         {/* ── Bottom Tab Bar (z:40, hidden in immersive) ─────────────────── */}
         {!isImmersive && (

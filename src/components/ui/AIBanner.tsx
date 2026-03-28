@@ -9,16 +9,7 @@ export function AIBanner() {
   useEffect(() => {
     async function checkAI() {
       try {
-        const res = await fetch('/api/ai/explain', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            title: 'ping',
-            statement: 'ping',
-            pattern: 'HASH_MAPS',
-            difficulty: 'EASY',
-          }),
-        });
+        const res = await fetch('/api/ai/health');
         if (res.status === 503 || res.status === 500) {
           setDegraded(true);
         }

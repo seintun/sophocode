@@ -189,25 +189,18 @@ export const BottomSheet: FC<BottomSheetProps> = ({
 
   // ── Pointer drag ───────────────────────────────────────────────────────
 
+  const dragStartHeightPx = useRef(0);
+  const dragMaxHeightPx = useRef(0);
+
   const onPointerDown = useCallback(
     (e: ReactPointerEvent<HTMLDivElement>) => {
       const target = e.target as HTMLElement | null;
       if (!target || !target.closest('[data-bottomsheet-drag="true"]')) {
-        return; // Only allow dragging from marked drag handles
+        return;
       }
 
-      // Don't intercept touches if the user is tapping an input or textarea
-      if (target) {
-        const isInteractive =
-          target.tagName === 'INPUT' ||
-          target.tagName === 'TEXTAREA' ||
-          target.isContentEditable ||
-          target.closest('input') ||
-          target.closest('textarea');
-
-        if (isInteractive) {
-          return; // Skip drag logic to allow native focus
-        }
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+        return;
       }
 
       if (animating.current) return;
@@ -216,9 +209,19 @@ export const BottomSheet: FC<BottomSheetProps> = ({
 
       isDragging.current = true;
       pointerStartY.current = e.clientY;
+      
+      const currentH = vhToPx(SNAP_HEIGHTS[currentHeight]);
+      const maxH = vhToPx(SNAP_HEIGHTS.full);
+      dragStartHeightPx.current = currentH;
+      dragMaxHeightPx.current = maxH;
 
-      // Disable transition for immediate drag response
+      // Prepare for transform-only drag:
+      // 1. Set height to max potential (to avoid layout changes later)
+      // 2. Set translateY to hide the extra height
       sheet.style.transition = 'none';
+      sheet.style.height = `${maxH}px`;
+      sheet.style.transform = `translateY(${maxH - currentH}px)`;
+      
       if (backdropRef.current) {
         backdropRef.current.style.transition = 'none';
       }
@@ -226,7 +229,7 @@ export const BottomSheet: FC<BottomSheetProps> = ({
       const dragTarget = e.currentTarget as HTMLDivElement;
       dragTarget.setPointerCapture(e.pointerId);
     },
-    [],
+    [currentHeight],
   );
 
   const onPointerMove = useCallback((e: ReactPointerEvent<HTMLDivElement>) => {
@@ -234,34 +237,21 @@ export const BottomSheet: FC<BottomSheetProps> = ({
     const sheet = sheetRef.current;
     if (!sheet) return;
 
-    const deltaY = e.clientY - pointerStartY.current;
+    const deltaY = pointerStartY.current - e.clientY; // positive = dragging up
+    const targetHeight = dragStartHeightPx.current + deltaY;
     
-    // We start dragging from the current state's height
-    const startHeightPx = vhToPx(SNAP_HEIGHTS[currentHeight]);
-    const rawTargetHeight = startHeightPx - deltaY;
+    // Clamp
+    const clampedHeight = Math.max(0, Math.min(targetHeight, dragMaxHeightPx.current));
+    const translatePx = dragMaxHeightPx.current - clampedHeight;
     
-    const baseHeightPx = vhToPx(SNAP_HEIGHTS[height]);
+    sheet.style.transform = `translateY(${translatePx}px)`;
     
-    // clamp max to full
-    const clampedHeight = Math.min(rawTargetHeight, vhToPx(SNAP_HEIGHTS.full));
-    
-    if (clampedHeight >= baseHeightPx) {
-      // Expanding or returning to base. Height increases, translateY stays 0.
-      sheet.style.height = `${clampedHeight}px`;
-      sheet.style.transform = `translateY(0px)`;
-      if (backdropRef.current) backdropRef.current.style.opacity = '1';
-    } else {
-      // Closing: Height locks at base, translateY slides it down offscreen
-      sheet.style.height = `${baseHeightPx}px`;
-      const translatePx = baseHeightPx - clampedHeight;
-      sheet.style.transform = `translateY(${translatePx}px)`;
-      
-      if (backdropRef.current) {
-        const progress = Math.min(Math.max(translatePx / baseHeightPx, 0), 1);
-        backdropRef.current.style.opacity = String(1 - progress);
-      }
+    if (backdropRef.current) {
+      const baseH = vhToPx(SNAP_HEIGHTS[height]);
+      const progress = Math.min(Math.max(clampedHeight / baseH, 0), 1);
+      backdropRef.current.style.opacity = String(progress);
     }
-  }, [currentHeight, height]);
+  }, [height]);
 
   const onPointerUp = useCallback(
     (e: ReactPointerEvent<HTMLDivElement>) => {
@@ -274,49 +264,52 @@ export const BottomSheet: FC<BottomSheetProps> = ({
       const dragTarget = e.currentTarget as HTMLDivElement;
       dragTarget.releasePointerCapture(e.pointerId);
 
-      const deltaY = e.clientY - pointerStartY.current;
-      const startHeightPx = vhToPx(SNAP_HEIGHTS[currentHeight]);
-      const endRawHeight = startHeightPx - deltaY;
+      const deltaY = pointerStartY.current - e.clientY;
+      const endHeight = dragStartHeightPx.current + deltaY;
       
-      const baseHeightPx = vhToPx(SNAP_HEIGHTS[height]);
-      const fullHeightPx = vhToPx(SNAP_HEIGHTS.full);
+      const baseH = vhToPx(SNAP_HEIGHTS[height]);
+      const fullH = vhToPx(SNAP_HEIGHTS.full);
 
-      // Re-enable transitions
       sheet.style.transition = transitionStyle;
       if (backdropRef.current) {
         backdropRef.current.style.transition = reducedMotion ? 'none' : 'opacity 0.3s ease';
       }
 
-      // 1. Check if they closed it (dragged far below base)
-      if (endRawHeight < baseHeightPx - (baseHeightPx * CLOSE_THRESHOLD_FRACTION)) {
-        sheet.style.transform = `translateY(${CLOSED_TRANSLATE})`;
+      // Snap logic
+      if (endHeight < baseH - (baseH * CLOSE_THRESHOLD_FRACTION)) {
+        // Close
+        sheet.style.transform = `translateY(${dragMaxHeightPx.current}px)`;
         if (backdropRef.current) backdropRef.current.style.opacity = '0';
         animating.current = true;
         setTimeout(() => {
           animating.current = false;
           onClose();
         }, animDuration);
-      } 
-      // 2. Check if they pulled it up enough to expand to full
-      else if (endRawHeight > baseHeightPx + ((fullHeightPx - baseHeightPx) * 0.25)) {
+      } else if (endHeight > baseH + ((fullH - baseH) * 0.25)) {
+        // Expand to full
         setCurrentHeight('full');
-        sheet.style.height = SNAP_HEIGHTS.full;
         sheet.style.transform = `translateY(0px)`;
         if (backdropRef.current) backdropRef.current.style.opacity = '1';
         animating.current = true;
-        setTimeout(() => { animating.current = false; }, animDuration);
-      }
-      // 3. Otherwise, snap back to base height
-      else {
+        setTimeout(() => {
+          animating.current = false;
+          sheet.style.height = SNAP_HEIGHTS.full;
+        }, animDuration);
+      } else {
+        // Snap back to base
         setCurrentHeight(height);
-        sheet.style.height = SNAP_HEIGHTS[height];
-        sheet.style.transform = `translateY(0px)`;
+        const targetTranslate = dragMaxHeightPx.current - baseH;
+        sheet.style.transform = `translateY(${targetTranslate}px)`;
         if (backdropRef.current) backdropRef.current.style.opacity = '1';
         animating.current = true;
-        setTimeout(() => { animating.current = false; }, animDuration);
+        setTimeout(() => {
+          animating.current = false;
+          sheet.style.height = SNAP_HEIGHTS[height];
+          sheet.style.transform = 'translateY(0px)';
+        }, animDuration);
       }
     },
-    [currentHeight, height, onClose, reducedMotion, transitionStyle, animDuration],
+    [height, onClose, reducedMotion, transitionStyle, animDuration],
   );
 
   // ── Backdrop click → dismiss ───────────────────────────────────────────

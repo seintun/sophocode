@@ -134,9 +134,28 @@ export function CodeEditor({
       editor.onDidBlurEditorWidget(() => {
         onBlur?.();
       });
+
+      // Force initial layout to ensure visibility
+      setTimeout(() => editor.layout(), 0);
     },
     [onFocus, onBlur],
   );
+
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container || !mounted) return;
+
+    const observer = new ResizeObserver(() => {
+      if (editorRef.current) {
+        editorRef.current.layout();
+      }
+    });
+
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, [mounted]);
 
   const options = useMemo(
     () => ({
@@ -149,7 +168,7 @@ export function CodeEditor({
       tabSize: 4,
       insertSpaces: true,
       wordWrap: 'on' as const,
-      automaticLayout: true,
+      automaticLayout: false,
       renderLineHighlight: 'line' as const,
       cursorBlinking: 'smooth' as const,
       cursorSmoothCaretAnimation: 'on' as const,
@@ -175,7 +194,7 @@ export function CodeEditor({
   }
 
   return (
-    <div aria-label="Code editor" className="h-full bg-[var(--color-bg-editor)]">
+    <div ref={containerRef} aria-label="Code editor" className="h-full bg-[var(--color-bg-editor)]">
       <MonacoEditor
         key="monaco-editor-instance"
         height="100%"
