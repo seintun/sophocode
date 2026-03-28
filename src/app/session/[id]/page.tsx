@@ -221,12 +221,12 @@ function SessionContent({ session, sessionId }: { session: SessionData; sessionI
       expected: tc.expected,
       isHidden: tc.isHidden,
     }));
-    await runTests(code, testCases);
+    const result = await runTests(code, testCases);
     setPyodideLoading(false);
     setShowFailureButton(true);
 
-    // Save test run results
-    if (testRunResults) {
+    // Save test run results using the returned result directly
+    if (result) {
       try {
         await fetch('/api/runs', {
           method: 'POST',
@@ -234,16 +234,16 @@ function SessionContent({ session, sessionId }: { session: SessionData; sessionI
           body: JSON.stringify({
             sessionId,
             code,
-            results: testRunResults.results,
-            passed: testRunResults.passed,
-            total: testRunResults.total,
+            results: result.results,
+            passed: result.passed,
+            total: result.total,
           }),
         });
       } catch {
         // Non-critical
       }
     }
-  }, [session, code, runTests, sessionId, testRunResults, pyodideReady]);
+  }, [session, code, runTests, sessionId, pyodideReady]);
 
   const handleAskAboutFailure = useCallback(
     (failedSummary: string) => {
@@ -277,40 +277,35 @@ function SessionContent({ session, sessionId }: { session: SessionData; sessionI
     }
   };
 
-  if (error) {
-    return (
-      <div className="flex h-[calc(100vh-57px)] items-center justify-center">
-        <div className="text-center">
-          <p className="mb-2 text-lg text-[var(--color-error)]">{error}</p>
-          <Link href="/practice" className="text-sm text-[var(--color-accent)] hover:underline">
-            Back to Practice
-          </Link>
-        </div>
-      </div>
-    );
-  }
+  const examples = useMemo(
+    () =>
+      (session.problem.examples ?? []) as Array<{
+        input: string;
+        output: string;
+        explanation?: string;
+      }>,
+    [session.problem.examples],
+  );
 
-  const isMac = typeof window !== 'undefined' && navigator.platform.toUpperCase().indexOf('MAC') >= 0;
-  const modKey = isMac ? '⌘' : 'Ctrl';
-
-  const examples = (session.problem.examples ?? []) as Array<{
-    input: string;
-    output: string;
-    explanation?: string;
-  }>;
-
-  const displayResults = testRunResults
-    ? testRunResults.results.map((r) => ({ ...r, isHidden: r.input === '' && r.expected === '' }))
-    : session.runs.length > 0
-      ? (session.runs[0].results as Array<{
-          input: string;
-          expected: string;
-          actual: string;
-          passed: boolean;
-          error?: string;
-          isHidden: boolean;
-        }>)
-      : [];
+  const displayResults = useMemo(
+    () =>
+      testRunResults
+        ? testRunResults.results.map((r) => ({
+            ...r,
+            isHidden: r.input === '' && r.expected === '',
+          }))
+        : session.runs.length > 0
+          ? (session.runs[0].results as Array<{
+              input: string;
+              expected: string;
+              actual: string;
+              passed: boolean;
+              error?: string;
+              isHidden: boolean;
+            }>)
+          : [],
+    [testRunResults, session.runs],
+  );
 
   const passedCount = testRunResults?.passed ?? session.runs[0]?.passed ?? 0;
   const totalCount = testRunResults?.total ?? session.runs[0]?.total ?? 0;
@@ -391,6 +386,19 @@ function SessionContent({ session, sessionId }: { session: SessionData; sessionI
       handleAskAboutFailure,
     ],
   );
+
+  if (error) {
+    return (
+      <div className="flex h-[calc(100vh-57px)] items-center justify-center">
+        <div className="text-center">
+          <p className="mb-2 text-lg text-[var(--color-error)]">{error}</p>
+          <Link href="/practice" className="text-sm text-[var(--color-accent)] hover:underline">
+            Back to Practice
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-[calc(100vh-57px)] flex-col">

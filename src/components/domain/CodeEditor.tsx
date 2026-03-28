@@ -125,7 +125,7 @@ export function CodeEditor({
 
   const handleEditorDidMount = useCallback(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (editor: any, monaco: any) => {
+    (editor: any, _monaco: any) => {
       editorRef.current = editor;
 
       editor.onDidFocusEditorWidget(() => {

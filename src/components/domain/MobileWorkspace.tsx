@@ -159,7 +159,7 @@ export const MobileWorkspace = forwardRef<MobileWorkspaceHandle, MobileWorkspace
     ref,
   ) {
     // ── Tab state ───────────────────────────────────────────────────────────
-    const [activeTab, setActiveTab] = useState<TabKey>('problem');
+    const [activeTab, setActiveTab] = useState<TabKey>('code');
 
     // ── Bottom sheet state machines ─────────────────────────────────────────
     const problemSheet = useBottomSheet('closed');

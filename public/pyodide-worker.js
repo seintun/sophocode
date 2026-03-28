@@ -173,7 +173,7 @@ self.onmessage = async function (event) {
           if (trimmed === 'None') return 'null';
           try {
             return JSON.stringify(JSON.parse(trimmed));
-          } catch (e) {
+          } catch {
             return trimmed;
           }
         }

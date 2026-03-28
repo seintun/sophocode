@@ -6,7 +6,14 @@ const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
   // Override default ignores of eslint-config-next.
-  globalIgnores(['.next/**', 'out/**', 'build/**', 'next-env.d.ts', 'src/generated/**']),
+  globalIgnores([
+    '.next/**',
+    '.vercel/**',
+    'out/**',
+    'build/**',
+    'next-env.d.ts',
+    'src/generated/**',
+  ]),
   {
     rules: {
       // Enforce `import type` for type-only imports — keeps runtime bundle clean
@@ -25,6 +32,13 @@ const eslintConfig = defineConfig([
       '@typescript-eslint/no-non-null-assertion': 'warn',
       // Enforce `T[]` for simple types, `Array<T>` for complex types
       '@typescript-eslint/array-type': ['error', { default: 'array-simple' }],
+    },
+  },
+  // BottomSheet uses setState in layoutEffect for DOM animation sync — intentional pattern
+  {
+    files: ['**/BottomSheet.tsx'],
+    rules: {
+      'react-hooks/set-state-in-effect': 'off',
     },
   },
 ]);

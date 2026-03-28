@@ -29,10 +29,12 @@ export function useCodeExecution() {
       if (mountedRef.current) {
         setResults(result);
       }
+      return result;
     } catch (err) {
       if (mountedRef.current) {
         setError(err instanceof Error ? err.message : 'Execution failed');
       }
+      throw err;
     } finally {
       if (mountedRef.current) {
         setIsRunning(false);

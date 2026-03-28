@@ -56,7 +56,7 @@ function vhToPx(vh: string): number {
 }
 
 /** CSS translateY that positions the sheet top edge at the correct height. */
-function sheetTranslateForHeight(h: SheetHeight): string {
+function sheetTranslateForHeight(_h: SheetHeight): string {
   // We explicitly set the CSS height to SNAP_HEIGHTS[h] on the sheet element,
   // so when it's natively at bottom-0, translateY(0) is perfectly open.
   return `translateY(0px)`;
@@ -77,7 +77,6 @@ export const BottomSheet: FC<BottomSheetProps> = ({
 
   // Drag state (refs — no re-renders during drag)
   const pointerStartY = useRef(0);
-  const sheetStartTranslate = useRef(0);
   const isDragging = useRef(false);
   const animating = useRef(false);
 
@@ -93,12 +92,6 @@ export const BottomSheet: FC<BottomSheetProps> = ({
   });
 
   const labelId = useId();
-
-  useEffect(() => {
-    if (open) {
-      setCurrentHeight(height);
-    }
-  }, [open, height]);
 
   // ── Reduced-motion detection ───────────────────────────────────────────
   useEffect(() => {
@@ -142,6 +135,10 @@ export const BottomSheet: FC<BottomSheetProps> = ({
 
     if (open) {
       // ── Opening ──
+      if (currentHeight !== height) {
+        setCurrentHeight(height);
+      }
+
       // Start off-screen (no transition)
       sheet.style.transition = 'none';
       backdrop.style.transition = 'none';
@@ -170,7 +167,7 @@ export const BottomSheet: FC<BottomSheetProps> = ({
         setMounted(false);
       }, animDuration);
     }
-  }, [open, height, transitionStyle, reducedMotion, animDuration, mounted]);
+  }, [open, height, currentHeight, transitionStyle, reducedMotion, animDuration, mounted]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -180,14 +177,6 @@ export const BottomSheet: FC<BottomSheetProps> = ({
   }, []);
 
   // ── Read current translateY from computed style ────────────────────────
-  const getCurrentTranslatePx = useCallback((): number => {
-    const sheet = sheetRef.current;
-    if (!sheet) return 0;
-    const m = new DOMMatrixReadOnly(getComputedStyle(sheet).transform);
-    return m.m42;
-  }, []);
-
-  // ── Pointer drag ───────────────────────────────────────────────────────
 
   const dragStartHeightPx = useRef(0);
   const dragMaxHeightPx = useRef(0);
@@ -209,7 +198,7 @@ export const BottomSheet: FC<BottomSheetProps> = ({
 
       isDragging.current = true;
       pointerStartY.current = e.clientY;
-      
+
       const currentH = vhToPx(SNAP_HEIGHTS[currentHeight]);
       const maxH = vhToPx(SNAP_HEIGHTS.full);
       dragStartHeightPx.current = currentH;
@@ -221,7 +210,7 @@ export const BottomSheet: FC<BottomSheetProps> = ({
       sheet.style.transition = 'none';
       sheet.style.height = `${maxH}px`;
       sheet.style.transform = `translateY(${maxH - currentH}px)`;
-      
+
       if (backdropRef.current) {
         backdropRef.current.style.transition = 'none';
       }
@@ -232,26 +221,29 @@ export const BottomSheet: FC<BottomSheetProps> = ({
     [currentHeight],
   );
 
-  const onPointerMove = useCallback((e: ReactPointerEvent<HTMLDivElement>) => {
-    if (!isDragging.current) return;
-    const sheet = sheetRef.current;
-    if (!sheet) return;
+  const onPointerMove = useCallback(
+    (e: ReactPointerEvent<HTMLDivElement>) => {
+      if (!isDragging.current) return;
+      const sheet = sheetRef.current;
+      if (!sheet) return;
 
-    const deltaY = pointerStartY.current - e.clientY; // positive = dragging up
-    const targetHeight = dragStartHeightPx.current + deltaY;
-    
-    // Clamp
-    const clampedHeight = Math.max(0, Math.min(targetHeight, dragMaxHeightPx.current));
-    const translatePx = dragMaxHeightPx.current - clampedHeight;
-    
-    sheet.style.transform = `translateY(${translatePx}px)`;
-    
-    if (backdropRef.current) {
-      const baseH = vhToPx(SNAP_HEIGHTS[height]);
-      const progress = Math.min(Math.max(clampedHeight / baseH, 0), 1);
-      backdropRef.current.style.opacity = String(progress);
-    }
-  }, [height]);
+      const deltaY = pointerStartY.current - e.clientY; // positive = dragging up
+      const targetHeight = dragStartHeightPx.current + deltaY;
+
+      // Clamp
+      const clampedHeight = Math.max(0, Math.min(targetHeight, dragMaxHeightPx.current));
+      const translatePx = dragMaxHeightPx.current - clampedHeight;
+
+      sheet.style.transform = `translateY(${translatePx}px)`;
+
+      if (backdropRef.current) {
+        const baseH = vhToPx(SNAP_HEIGHTS[height]);
+        const progress = Math.min(Math.max(clampedHeight / baseH, 0), 1);
+        backdropRef.current.style.opacity = String(progress);
+      }
+    },
+    [height],
+  );
 
   const onPointerUp = useCallback(
     (e: ReactPointerEvent<HTMLDivElement>) => {
@@ -266,7 +258,7 @@ export const BottomSheet: FC<BottomSheetProps> = ({
 
       const deltaY = pointerStartY.current - e.clientY;
       const endHeight = dragStartHeightPx.current + deltaY;
-      
+
       const baseH = vhToPx(SNAP_HEIGHTS[height]);
       const fullH = vhToPx(SNAP_HEIGHTS.full);
 
@@ -276,7 +268,7 @@ export const BottomSheet: FC<BottomSheetProps> = ({
       }
 
       // Snap logic
-      if (endHeight < baseH - (baseH * CLOSE_THRESHOLD_FRACTION)) {
+      if (endHeight < baseH - baseH * CLOSE_THRESHOLD_FRACTION) {
         // Close
         sheet.style.transform = `translateY(${dragMaxHeightPx.current}px)`;
         if (backdropRef.current) backdropRef.current.style.opacity = '0';
@@ -285,7 +277,7 @@ export const BottomSheet: FC<BottomSheetProps> = ({
           animating.current = false;
           onClose();
         }, animDuration);
-      } else if (endHeight > baseH + ((fullH - baseH) * 0.25)) {
+      } else if (endHeight > baseH + (fullH - baseH) * 0.25) {
         // Expand to full
         setCurrentHeight('full');
         sheet.style.transform = `translateY(0px)`;

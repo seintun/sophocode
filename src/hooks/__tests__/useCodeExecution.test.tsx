@@ -70,7 +70,11 @@ describe('useCodeExecution', () => {
     const { result } = renderHook(() => useCodeExecution());
 
     await act(async () => {
-      await result.current.run('code', [{ input: '1', expected: '1', isHidden: false }]);
+      try {
+        await result.current.run('code', [{ input: '1', expected: '1', isHidden: false }]);
+      } catch {
+        // Expected
+      }
     });
 
     expect(result.current.error).toBe('boom');
