@@ -15,10 +15,11 @@ describe('Skeleton', () => {
 
   it('merges custom className', () => {
     const { container } = render(<Skeleton className="h-4 w-32" />);
-    const el = container.firstElementChild!;
-    expect(el.className).toContain('animate-pulse');
-    expect(el.className).toContain('h-4');
-    expect(el.className).toContain('w-32');
+    const el = container.firstElementChild;
+    expect(el).not.toBeNull();
+    expect(el?.className).toContain('animate-pulse');
+    expect(el?.className).toContain('h-4');
+    expect(el?.className).toContain('w-32');
   });
 
   it('passes extra HTML attributes', () => {

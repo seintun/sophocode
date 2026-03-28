@@ -2,7 +2,7 @@ import { createOpenAI } from '@ai-sdk/openai';
 
 const openaiBase = createOpenAI({
   baseURL: 'https://openrouter.ai/api/v1',
-  apiKey: process.env.OPENROUTER_API_KEY!,
+  apiKey: process.env.OPENROUTER_API_KEY as string,
 });
 
 // OpenRouter doesn't support the Responses API (v3 default).

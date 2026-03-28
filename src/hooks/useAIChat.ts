@@ -45,7 +45,8 @@ async function* readSseStream(response: Response) {
         if (data === '[DONE]') return;
         try {
           yield JSON.parse(data) as { type: string; delta?: string; text?: string };
-        } catch {
+        } catch (err) {
+          console.error('[useAIChat] Failed to parse SSE data chunk:', { data, error: err });
           // Skip unparseable lines
         }
       }
@@ -53,7 +54,11 @@ async function* readSseStream(response: Response) {
   }
 }
 
-function extractTextFromSse(response: Response, onUpdate: (text: string) => void): Promise<string> {
+function extractTextFromSse(
+  response: Response,
+  onUpdate: (text: string) => void,
+  context: string,
+): Promise<string> {
   return new Promise(async (resolve, reject) => {
     let fullText = '';
 
@@ -69,6 +74,7 @@ function extractTextFromSse(response: Response, onUpdate: (text: string) => void
       }
       resolve(fullText);
     } catch (err) {
+      console.error(`[useAIChat] Error in ${context} SSE stream:`, err);
       reject(err);
     }
   });
@@ -85,6 +91,9 @@ export function useAIChat({ mode, problem, currentCode, testResults }: UseAIChat
         ...problem,
       },
     }),
+    onError: (err) => {
+      console.error('[useAIChat] Chat request failed:', err);
+    },
   });
 
   const [hintStream, setHintStream] = useState<StreamedContent>({ text: '', isLoading: false });
@@ -104,8 +113,9 @@ export function useAIChat({ mode, problem, currentCode, testResults }: UseAIChat
   );
 
   const getHint = useCallback(
-    async (level: number): Promise<string> => {
+    async (level: number, codeOverride?: string): Promise<string> => {
       setHintStream({ text: '', isLoading: true });
+      const codeToUse = codeOverride ?? (currentCode || '');
 
       try {
         const res = await fetch('/api/ai/hint', {
@@ -115,7 +125,7 @@ export function useAIChat({ mode, problem, currentCode, testResults }: UseAIChat
             title: problem.title,
             statement: problem.statement,
             pattern: problem.pattern,
-            currentCode: currentCode || '',
+            currentCode: codeToUse,
             testResults,
             level,
             mode,
@@ -124,26 +134,36 @@ export function useAIChat({ mode, problem, currentCode, testResults }: UseAIChat
 
         if (!res.ok) {
           const text = await res.text();
-          const errorMsg = text || 'Failed to get hint';
-          setHintStream({ text: errorMsg, isLoading: false });
-          return errorMsg;
-        }
-
-        if (!res.body) {
-          setHintStream({ text: 'No response received', isLoading: false });
+          const errorMsg = `Server returned ${res.status}: ${text || 'Unknown error'}`;
+          console.error('[useAIChat] getHint API failure:', errorMsg);
+          setHintStream({
+            text: "Sorry, I couldn't generate a hint right now. Please try again.",
+            isLoading: false,
+          });
           return '';
         }
 
-        const fullText = await extractTextFromSse(res, (text) => {
-          setHintStream({ text, isLoading: true });
-        });
+        if (!res.body) {
+          console.error('[useAIChat] getHint: empty response body');
+          setHintStream({ text: 'No response received from the AI coach.', isLoading: false });
+          return '';
+        }
+
+        const fullText = await extractTextFromSse(
+          res,
+          (text) => {
+            setHintStream({ text, isLoading: true });
+          },
+          'getHint',
+        );
 
         setHintStream({ text: fullText, isLoading: false });
         return fullText;
       } catch (err) {
-        const errorMsg = err instanceof Error ? err.message : 'Failed to get hint';
+        console.error('[useAIChat] getHint exception:', err);
+        const errorMsg = 'An unexpected error occurred while fetching your hint.';
         setHintStream({ text: errorMsg, isLoading: false });
-        return errorMsg;
+        return '';
       }
     },
     [problem, currentCode, testResults, mode],
@@ -166,24 +186,32 @@ export function useAIChat({ mode, problem, currentCode, testResults }: UseAIChat
 
       if (!res.ok) {
         const text = await res.text();
-        const errorMsg = text || 'Failed to get explanation';
-        setExplanationStream({ text: errorMsg, isLoading: false });
+        console.error('[useAIChat] getExplanation API failure:', { status: res.status, text });
+        setExplanationStream({
+          text: 'Failed to generate explanation. Please try again.',
+          isLoading: false,
+        });
         return;
       }
 
       if (!res.body) {
-        setExplanationStream({ text: 'No response received', isLoading: false });
+        console.error('[useAIChat] getExplanation: empty response body');
+        setExplanationStream({ text: 'No response received.', isLoading: false });
         return;
       }
 
-      const fullText = await extractTextFromSse(res, (text) => {
-        setExplanationStream({ text, isLoading: true });
-      });
+      const fullText = await extractTextFromSse(
+        res,
+        (text) => {
+          setExplanationStream({ text, isLoading: true });
+        },
+        'getExplanation',
+      );
 
       setExplanationStream({ text: fullText, isLoading: false });
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : 'Failed to get explanation';
-      setExplanationStream({ text: errorMsg, isLoading: false });
+      console.error('[useAIChat] getExplanation exception:', err);
+      setExplanationStream({ text: 'An unexpected error occurred.', isLoading: false });
     }
   }, [problem]);
 

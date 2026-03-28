@@ -9,20 +9,13 @@ export function AIBanner() {
   useEffect(() => {
     async function checkAI() {
       try {
-        const res = await fetch('/api/ai/explain', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            title: 'ping',
-            statement: 'ping',
-            pattern: 'HASH_MAPS',
-            difficulty: 'EASY',
-          }),
-        });
+        const res = await fetch('/api/ai/health');
         if (res.status === 503 || res.status === 500) {
+          console.warn('[AIBanner] AI health check failed:', res.status);
           setDegraded(true);
         }
-      } catch {
+      } catch (err) {
+        console.warn('[AIBanner] AI health check error:', err);
         setDegraded(true);
       }
     }
@@ -36,7 +29,7 @@ export function AIBanner() {
     <div
       role="alert"
       className={cn(
-        'border-b border-[var(--color-warning)]/30 bg-[var(--color-warning)]/10 px-4 py-2',
+        'border-b border-[var(--color-warning)]/30 bg-[var(--color-warning)]/10 px-4 py-1',
         'text-center text-sm text-[var(--color-warning)]',
       )}
     >

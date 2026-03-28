@@ -1,6 +1,6 @@
 import { renderHook, act } from '@testing-library/react';
 import { useCodeExecution } from '../useCodeExecution';
-import { runTests, terminateWorker } from '@/lib/execution/runner';
+import { runTests, terminateWorker, type RunResult } from '@/lib/execution/runner';
 
 vi.mock('@/lib/execution/runner', () => ({
   runTests: vi.fn(),
@@ -24,7 +24,7 @@ describe('useCodeExecution', () => {
   });
 
   it('toggles isRunning during async run', async () => {
-    let resolveRun!: (value: any) => void;
+    let resolveRun!: (value: RunResult) => void;
     mockedRunTests.mockReturnValue(new Promise((r) => (resolveRun = r)));
 
     const { result } = renderHook(() => useCodeExecution());
@@ -70,7 +70,11 @@ describe('useCodeExecution', () => {
     const { result } = renderHook(() => useCodeExecution());
 
     await act(async () => {
-      await result.current.run('code', [{ input: '1', expected: '1', isHidden: false }]);
+      try {
+        await result.current.run('code', [{ input: '1', expected: '1', isHidden: false }]);
+      } catch {
+        // Expected
+      }
     });
 
     expect(result.current.error).toBe('boom');
@@ -86,7 +90,7 @@ describe('useCodeExecution', () => {
   });
 
   it('does not set state after unmount', async () => {
-    let resolveRun!: (value: any) => void;
+    let resolveRun!: (value: RunResult) => void;
     mockedRunTests.mockReturnValue(new Promise((r) => (resolveRun = r)));
 
     const { result, unmount } = renderHook(() => useCodeExecution());

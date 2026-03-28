@@ -19,26 +19,39 @@ export function useCodeExecution() {
     };
   }, []);
 
-  const run = useCallback(async (code: string, testCases: TestCase[]) => {
-    setIsRunning(true);
-    setError(null);
-    setResults(null);
+  const run = useCallback(
+    async (code: string, testCases: TestCase[], functionName?: string | null) => {
+      setIsRunning(true);
+      setError(null);
+      setResults(null);
 
-    try {
-      const result = await runTests(code, testCases);
-      if (mountedRef.current) {
-        setResults(result);
+      try {
+        const result = await runTests(code, testCases, functionName);
+        if (mountedRef.current) {
+          setResults(result);
+        }
+        return result;
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error ? err.message : 'An unexpected error occurred during execution';
+        console.error('[useCodeExecution] Execution failed:', {
+          error: err,
+          codeLength: code.length,
+          testCasesCount: testCases.length,
+        });
+
+        if (mountedRef.current) {
+          setError(errorMessage);
+        }
+        throw err;
+      } finally {
+        if (mountedRef.current) {
+          setIsRunning(false);
+        }
       }
-    } catch (err) {
-      if (mountedRef.current) {
-        setError(err instanceof Error ? err.message : 'Execution failed');
-      }
-    } finally {
-      if (mountedRef.current) {
-        setIsRunning(false);
-      }
-    }
-  }, []);
+    },
+    [],
+  );
 
   return { run, results, isRunning, error };
 }

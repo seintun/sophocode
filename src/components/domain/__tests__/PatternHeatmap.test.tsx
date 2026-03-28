@@ -1,7 +1,17 @@
 import { render, screen } from '@testing-library/react';
 import { PatternHeatmap } from '../PatternHeatmap';
+import type { Pattern } from '@/generated/prisma/enums';
 
-const mockStats = [
+interface PatternStat {
+  pattern: Pattern;
+  total: number;
+  mastered: number;
+  inProgress: number;
+  needsRefresh: number;
+  unseen: number;
+}
+
+const mockStats: PatternStat[] = [
   {
     pattern: 'ARRAYS_STRINGS',
     total: 5,
@@ -26,7 +36,7 @@ const mockStats = [
     needsRefresh: 0,
     unseen: 1,
   },
-] as any;
+];
 
 describe('PatternHeatmap', () => {
   it('renders grid of all 14 patterns', () => {
@@ -78,7 +88,7 @@ describe('PatternHeatmap', () => {
   });
 
   it('all patterns render as UNSEEN when stats is empty', () => {
-    render(<PatternHeatmap stats={[] as any} />);
+    render(<PatternHeatmap stats={[]} />);
 
     const unseenLabels = screen.getAllByText('UNSEEN');
     expect(unseenLabels).toHaveLength(14);
@@ -87,7 +97,7 @@ describe('PatternHeatmap', () => {
   it('MIXED pattern state', () => {
     // ARRAYS_STRINGS has mastered=3, inProgress=1, needsRefresh=1 → needsRefresh>0 → NEEDS_REFRESH
     // Test with a stat where needsRefresh=0 but not all mastered → IN_PROGRESS
-    const mixedStats = [
+    const mixedStats: PatternStat[] = [
       {
         pattern: 'ARRAYS_STRINGS',
         total: 5,
@@ -96,7 +106,7 @@ describe('PatternHeatmap', () => {
         needsRefresh: 0,
         unseen: 1,
       },
-    ] as any;
+    ];
 
     render(<PatternHeatmap stats={mixedStats} />);
 

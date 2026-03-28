@@ -27,7 +27,11 @@ function getWorker(): Worker {
   return worker;
 }
 
-export function runTests(code: string, testCases: TestCase[]): Promise<RunResult> {
+export function runTests(
+  code: string,
+  testCases: TestCase[],
+  functionName?: string | null,
+): Promise<RunResult> {
   return new Promise((resolve, reject) => {
     const w = getWorker();
 
@@ -64,7 +68,7 @@ export function runTests(code: string, testCases: TestCase[]): Promise<RunResult
       reject(new Error(err.message || 'Worker error'));
     };
 
-    w.postMessage({ code, testCases, timeout: 5000 });
+    w.postMessage({ code, testCases, functionName, timeout: 5000 });
   });
 }
 

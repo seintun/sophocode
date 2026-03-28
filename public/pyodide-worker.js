@@ -22,14 +22,18 @@ async function loadPyodideInstance() {
   }
 }
 
-function runTestCase(py, code, input) {
+function runTestCase(py, code, input, funcName) {
   const indentedCode = code
     .split('\n')
     .map((line) => '    ' + line)
     .join('\n');
 
+  if (!funcName) {
+    console.warn('[PyodideWorker] No function definition found in code.');
+  }
+
   const setup = `
-import sys, io
+import sys, io, json
 
 _stdout_capture = io.StringIO()
 _stderr_capture = io.StringIO()
@@ -55,6 +59,33 @@ try:
 
   const execution = `
 ${indentedCode}
+${
+  funcName
+    ? `
+    # Automatic function invocation for coding problems
+    try:
+        try:
+            _args = json.loads(${JSON.stringify(input)})
+        except Exception:
+            _args = ${JSON.stringify(input)} # Fallback to raw string
+
+        if isinstance(_args, list):
+            _result = ${funcName}(*_args)
+        else:
+            _result = ${funcName}(_args)
+            
+        if _result is not None:
+            # Standardizing result output to JSON for easier JS matching
+            try:
+                print(json.dumps(_result))
+            except (TypeError, OverflowError):
+                # Fallback for non-serializable objects (like custom classes)
+                print(str(_result))
+    except Exception as _e:
+        raise _e
+`
+    : ''
+}
 except Exception as _e:
     import traceback as _tb
     _error_msg = _tb.format_exc()
@@ -70,6 +101,9 @@ _errors = _stderr_capture.getvalue().strip()
 
   function cleanError(raw) {
     if (!raw) return raw;
+    // Log the full traceback to console for developer debugging
+    console.error('[PyodideWorker] Python Traceback:', raw);
+
     return raw
       .split('\n')
       .filter(
@@ -86,7 +120,8 @@ _errors = _stderr_capture.getvalue().strip()
   try {
     py.runPython(setup + '\n' + execution);
   } catch (syntaxErr) {
-    return { actual: '', error: cleanError(syntaxErr.message) };
+    console.error('[PyodideWorker] Syntax Error during execution:', syntaxErr);
+    return { actual: '', error: `Syntax Error: ${cleanError(syntaxErr.message)}` };
   }
 
   const actual = py.globals.get('_actual') || '';
@@ -97,21 +132,28 @@ _errors = _stderr_capture.getvalue().strip()
     return { actual: '', error: cleanError(errorMsg) };
   }
   if (stderr) {
-    return { actual: '', error: cleanError(stderr) };
+    // Treat stderr as a warning/error if it's not empty, but don't fail if we have actual output?
+    // Actually, most coding platforms fail if there's stderr.
+    return { actual, error: cleanError(stderr) };
   }
   return { actual, error: undefined };
 }
 
 self.onmessage = async function (event) {
-  const { code, testCases, timeout } = event.data;
+  const { code, testCases, timeout, functionName } = event.data;
 
   try {
+    console.log('[PyodideWorker] Initializing execution...');
     const py = await loadPyodideInstance();
+
+    // Fallback if functionName wasn't passed from the UI
+    const finalFunctionName =
+      functionName || (code.match(/^[ \t]*def\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\(/m) || [])[1] || null;
 
     const results = [];
     const timeoutMs = timeout || 5000;
 
-    for (const tc of testCases) {
+    for (const [index, tc] of testCases.entries()) {
       let timedOut = false;
       const timer = setTimeout(() => {
         timedOut = true;
@@ -129,7 +171,7 @@ self.onmessage = async function (event) {
           continue;
         }
 
-        const { actual, error } = runTestCase(py, code, tc.input);
+        const { actual, error } = runTestCase(py, code, tc.input, finalFunctionName);
 
         if (timedOut) {
           results.push({
@@ -142,7 +184,27 @@ self.onmessage = async function (event) {
           continue;
         }
 
-        const passed = error === undefined && actual.trim() === tc.expected.trim();
+        function normalize(val) {
+          if (!val) return '';
+          const trimmed = val.trim();
+
+          // Helper for Python values that don't match JSON
+          if (trimmed === 'True') return 'true';
+          if (trimmed === 'False') return 'false';
+          if (trimmed === 'None') return 'null';
+
+          try {
+            // Attempt to parse and re-stringify to normalize spacing/formatting
+            return JSON.stringify(JSON.parse(trimmed));
+          } catch {
+            // If it's not JSON, return the trimmed string
+            return trimmed;
+          }
+        }
+
+        const normalizedActual = normalize(actual);
+        const normalizedExpected = normalize(tc.expected);
+        const passed = error === undefined && normalizedActual === normalizedExpected;
 
         if (tc.isHidden) {
           results.push({ passed, input: '', expected: '', actual: '' });
@@ -156,12 +218,13 @@ self.onmessage = async function (event) {
           });
         }
       } catch (runError) {
+        console.error(`[PyodideWorker] Unhandled error in test case ${index + 1}:`, runError);
         results.push({
           passed: false,
           input: tc.isHidden ? '' : tc.input,
           expected: tc.isHidden ? '' : tc.expected,
           actual: '',
-          error: runError.message || 'Unknown execution error',
+          error: runError.message || 'Unknown internal execution error',
         });
       } finally {
         clearTimeout(timer);
@@ -170,8 +233,9 @@ self.onmessage = async function (event) {
 
     self.postMessage({ results });
   } catch (err) {
+    console.error('[PyodideWorker] Fatal Initialization Error:', err);
     self.postMessage({
-      error: err.message || 'Failed to load Pyodide',
+      error: `Failed to load Pyodide: ${err.message || 'Unknown error'}. Please check your internet connection or try a different browser.`,
     });
   }
 };
