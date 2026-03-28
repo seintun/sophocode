@@ -17,7 +17,7 @@ import { useSwipeNavigation } from '@/hooks/useSwipeNavigation';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
-type TabKey = 'problem' | 'code' | 'coach';
+type TabKey = 'problem' | 'code' | 'coach' | 'run';
 
 interface MobileWorkspaceProps {
   problem: ReactNode;
@@ -29,6 +29,8 @@ interface MobileWorkspaceProps {
   onEditorBlur?: () => void;
   problemTitle?: string;
   constraints?: string[];
+  onRunTests?: () => void;
+  isRunning?: boolean;
 }
 
 export interface MobileWorkspaceHandle {
@@ -45,20 +47,93 @@ export interface MobileWorkspaceHandle {
 // ── Constants ────────────────────────────────────────────────────────────────
 
 const TABS: Array<{ key: TabKey; label: string; icon: ReactNode }> = [
-  { 
-    key: 'problem', 
+  {
+    key: 'problem',
     label: 'Problem',
-    icon: <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+    icon: (
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="16"
+        height="16"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+      >
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+        <polyline points="14 2 14 8 20 8"></polyline>
+        <line x1="16" y1="13" x2="8" y2="13"></line>
+        <line x1="16" y1="17" x2="8" y2="17"></line>
+        <polyline points="10 9 9 9 8 9"></polyline>
+      </svg>
+    ),
   },
-  { 
-    key: 'code', 
+  {
+    key: 'code',
     label: 'Code',
-    icon: <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline><line x1="14" y1="4" x2="10" y2="20"></line></svg>
+    icon: (
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="16"
+        height="16"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+      >
+        <polyline points="16 18 22 12 16 6"></polyline>
+        <polyline points="8 6 2 12 8 18"></polyline>
+        <line x1="14" y1="4" x2="10" y2="20"></line>
+      </svg>
+    ),
   },
-  { 
-    key: 'coach', 
+  {
+    key: 'coach',
     label: 'Coach',
-    icon: <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path><line x1="9" y1="10" x2="15" y2="10"></line><line x1="12" y1="10" x2="12" y2="10"></line></svg>
+    icon: (
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="16"
+        height="16"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+      >
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+        <line x1="9" y1="10" x2="15" y2="10"></line>
+        <line x1="12" y1="10" x2="12" y2="10"></line>
+      </svg>
+    ),
+  },
+  {
+    key: 'run',
+    label: 'Run',
+    icon: (
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="16"
+        height="16"
+        viewBox="0 0 24 24"
+        fill="currentColor"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+      >
+        <polygon points="5 3 19 12 5 21 5 3"></polygon>
+      </svg>
+    ),
   },
 ];
 
@@ -78,6 +153,8 @@ export const MobileWorkspace = forwardRef<MobileWorkspaceHandle, MobileWorkspace
       onEditorBlur,
       problemTitle,
       constraints = [],
+      onRunTests,
+      isRunning,
     },
     ref,
   ) {
@@ -101,17 +178,9 @@ export const MobileWorkspace = forwardRef<MobileWorkspaceHandle, MobileWorkspace
 
     // ── Derived state ───────────────────────────────────────────────────────
 
-    // Active sheet height for the current tab (only relevant for sheet-based tabs)
-    const activeSheetHeight =
-      activeTab === 'problem'
-        ? problemSheet.height
-        : activeTab === 'coach'
-          ? coachSheet.height
-          : 'closed';
-
     // ── Swipe navigation ────────────────────────────────────────────────────
     const { swipeHandlers } = useSwipeNavigation({
-      tabs: TABS.map((t) => t.key),
+      tabs: TABS.filter((t) => t.key !== 'run').map((t) => t.key),
       currentTab: activeTab,
       onTabChange: (tab) => handleTabChange(tab as TabKey),
     });
@@ -120,23 +189,33 @@ export const MobileWorkspace = forwardRef<MobileWorkspaceHandle, MobileWorkspace
 
     const handleTabChange = useCallback(
       (tab: TabKey) => {
-        setActiveTab(tab);
+        // Toggle: clicking the same tab dismisses it
+        if (activeTab === tab) {
+          problemSheet.close();
+          coachSheet.close();
+          testResultsSheet.close();
+          setActiveTab('code');
+          return;
+        }
 
-        // Always close test results when navigating away
+        // Close all sheets first, then open only the target
+        problemSheet.close();
+        coachSheet.close();
         testResultsSheet.close();
 
-        if (tab === 'code') {
-          problemSheet.close();
-          coachSheet.close();
+        setActiveTab(tab);
+
+        if (tab === 'run') {
+          onRunTests?.();
+          testResultsSheet.open();
         } else if (tab === 'problem') {
-          coachSheet.close();
-          problemSheet.toggle();
+          problemSheet.open();
         } else if (tab === 'coach') {
-          problemSheet.close();
-          coachSheet.toggle();
+          coachSheet.open();
         }
+        // code: no sheet, just the editor
       },
-      [problemSheet, coachSheet, testResultsSheet],
+      [activeTab, problemSheet, coachSheet, testResultsSheet, onRunTests],
     );
 
     // ── Editor focus / blur → immersive mode ────────────────────────────────
@@ -301,26 +380,48 @@ export const MobileWorkspace = forwardRef<MobileWorkspaceHandle, MobileWorkspace
             style={{ height: TAB_BAR_HEIGHT }}
           >
             {TABS.map((tab) => {
-              const isActive =
-                activeTab === tab.key && (tab.key === 'code' || activeSheetHeight !== 'closed');
+              const isActive = activeTab === tab.key;
+              const isRunTab = tab.key === 'run';
 
               return (
                 <button
                   key={tab.key}
                   role="tab"
-                  aria-selected={activeTab === tab.key}
+                  aria-selected={isActive}
                   aria-controls={`mobile-panel-${tab.key}`}
                   id={`mobile-tab-${tab.key}`}
                   onClick={() => handleTabChange(tab.key)}
                   className={cn(
                     'flex flex-1 items-center justify-center gap-2 text-sm font-medium transition-colors',
                     isActive
-                      ? 'border-b-2 border-[var(--color-accent)] text-[var(--color-accent)]'
+                      ? isRunTab
+                        ? 'border-b-2 border-[var(--color-error)] text-[var(--color-error)]'
+                        : 'border-b-2 border-[var(--color-accent)] text-[var(--color-accent)]'
                       : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]',
                   )}
+                  disabled={isRunTab && isRunning}
                 >
-                  {tab.icon}
-                  {tab.label}
+                  {isRunTab && isRunning ? (
+                    <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  ) : isRunTab && isActive ? (
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden="true"
+                    >
+                      <polyline points="15 18 9 12 15 6"></polyline>
+                    </svg>
+                  ) : (
+                    tab.icon
+                  )}
+                  {!isRunTab || !isActive ? tab.label : null}
                 </button>
               );
             })}

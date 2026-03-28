@@ -28,8 +28,12 @@ function runTestCase(py, code, input) {
     .map((line) => '    ' + line)
     .join('\n');
 
+  // Detect function name for automatic invocation
+  const funcMatch = code.match(/def\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\(/);
+  const funcName = funcMatch ? funcMatch[1] : null;
+
   const setup = `
-import sys, io
+import sys, io, json
 
 _stdout_capture = io.StringIO()
 _stderr_capture = io.StringIO()
@@ -55,6 +59,24 @@ try:
 
   const execution = `
 ${indentedCode}
+${
+  funcName
+    ? `
+    # Automatic function invocation for coding problems
+    try:
+        _args = json.loads(${JSON.stringify(input)})
+        if isinstance(_args, list):
+            _result = ${funcName}(*_args)
+        else:
+            _result = ${funcName}(_args)
+            
+        if _result is not None:
+            print(json.dumps(_result))
+    except Exception as _e:
+        raise _e
+`
+    : ''
+}
 except Exception as _e:
     import traceback as _tb
     _error_msg = _tb.format_exc()
@@ -142,7 +164,21 @@ self.onmessage = async function (event) {
           continue;
         }
 
-        const passed = error === undefined && actual.trim() === tc.expected.trim();
+        function normalize(val) {
+          if (!val) return '';
+          const trimmed = val.trim();
+          // Normalize Python boolean strings to JS-like JSON
+          if (trimmed === 'True') return 'true';
+          if (trimmed === 'False') return 'false';
+          if (trimmed === 'None') return 'null';
+          try {
+            return JSON.stringify(JSON.parse(trimmed));
+          } catch (e) {
+            return trimmed;
+          }
+        }
+
+        const passed = error === undefined && normalize(actual) === normalize(tc.expected);
 
         if (tc.isHidden) {
           results.push({ passed, input: '', expected: '', actual: '' });

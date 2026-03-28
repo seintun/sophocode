@@ -12,6 +12,8 @@ interface SessionLayoutProps {
   problemTitle?: string;
   constraints?: string[];
   workspaceRef?: React.RefObject<MobileWorkspaceHandle | null>;
+  onRunTests?: () => void;
+  isRunning?: boolean;
 }
 
 export function SessionLayout({
@@ -23,6 +25,8 @@ export function SessionLayout({
   problemTitle,
   constraints,
   workspaceRef,
+  onRunTests,
+  isRunning,
 }: SessionLayoutProps) {
   return (
     <>
@@ -49,6 +53,8 @@ export function SessionLayout({
           testResultsData={testResultsData}
           problemTitle={problemTitle}
           constraints={constraints}
+          onRunTests={onRunTests}
+          isRunning={isRunning}
         />
       </div>
     </>
