@@ -278,7 +278,7 @@ export const BottomSheet: FC<BottomSheetProps> = ({
         )}
 
         {/* Content wrapper */}
-        <div id={labelId} className="flex-1 min-h-0">
+        <div id={labelId} className="flex-1 flex flex-col min-h-0">
           {children}
         </div>
       </div>
