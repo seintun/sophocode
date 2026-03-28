@@ -1,36 +1,33 @@
 'use client';
 
-import dynamic from 'next/dynamic';
+import MonacoEditor, { type Monaco } from '@monaco-editor/react';
 import { useCallback, useRef, useEffect, useState, useMemo, useLayoutEffect } from 'react';
 import { Skeleton } from '@/components/ui/Skeleton';
 
-const useIsomorphicLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect;
+type StandaloneCodeEditor = Parameters<
+  NonNullable<React.ComponentProps<typeof MonacoEditor>['onMount']>
+>[0];
 
-const MonacoEditor = dynamic(() => import('@monaco-editor/react'), {
-  ssr: false,
-  loading: () => (
-    <div className="flex h-full items-center justify-center bg-[var(--color-bg-primary)]">
-      <Skeleton className="h-full w-full" />
-    </div>
-  ),
-});
+const useIsomorphicLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect;
 
 // ── Hack to Ignore Harmless Monaco Cancellation Errors ───────────────────────
 if (
   typeof window !== 'undefined' &&
-  !(window as any as Record<string, any>).__monaco_hack_applied
+  !(window as unknown as Record<string, unknown>).__monaco_hack_applied
 ) {
-  (window as any as Record<string, any>).__monaco_hack_applied = true;
+  (window as unknown as Record<string, unknown>).__monaco_hack_applied = true;
   // 1. Intercept console.error
   const originalError = console.error;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  console.error = (...args: any[]) => {
+  console.error = (...args: unknown[]) => {
     const isMonacoCanceledError = args.some(
       (arg) =>
         arg &&
         ((typeof arg === 'string' && arg.includes('Canceled')) ||
           (typeof arg === 'object' &&
-            (arg.name === 'Canceled' || arg.message?.includes('Canceled')))),
+            arg !== null &&
+            ('name' in arg || 'message' in arg) &&
+            ((arg as Record<string, unknown>).name === 'Canceled' ||
+              (arg as Record<string, string>).message?.includes('Canceled')))),
     );
 
     if (isMonacoCanceledError) {
@@ -41,11 +38,10 @@ if (
 
   // 2. Intercept unhandled promise rejections
   window.addEventListener('unhandledrejection', (event) => {
+    const reason = event.reason as Record<string, unknown> | null;
     if (
-      event.reason &&
-      (event.reason === 'Canceled' ||
-        event.reason.name === 'Canceled' ||
-        event.reason.message?.includes('Canceled'))
+      reason &&
+      (reason === 'Canceled' || reason.name === 'Canceled' || reason.message === 'Canceled')
     ) {
       event.preventDefault(); // Stop Next.js dev overlay from catching it
     }
@@ -70,8 +66,7 @@ export function CodeEditor({
 }: CodeEditorProps) {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const editorRef = useRef<any>(null);
+  const editorRef = useRef<StandaloneCodeEditor | null>(null);
   const [mounted, setMounted] = useState(false);
   const isMobile = mounted && (typeof window !== 'undefined' ? window.innerWidth < 768 : false);
 
@@ -97,11 +92,9 @@ export function CodeEditor({
     [onChange],
   );
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const handleEditorWillMount = useCallback((monaco: any) => {
+  const handleEditorWillMount = useCallback((monaco: Monaco) => {
     // Configure Monaco to use blob workers to avoid network cancellation errors
     monaco.editor.defineTheme('sophocode-dark', {
-      base: 'vs-dark',
       inherit: true,
       rules: [
         { token: '', foreground: 'E8ECF4', background: '080C18' },
@@ -128,8 +121,7 @@ export function CodeEditor({
   }, []);
 
   const handleEditorDidMount = useCallback(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (editor: any) => {
+    (editor: StandaloneCodeEditor) => {
       editorRef.current = editor;
 
       editor.onDidFocusEditorWidget(() => {

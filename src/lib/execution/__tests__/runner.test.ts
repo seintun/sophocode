@@ -3,8 +3,8 @@ import { runTests, terminateWorker, type TestCase } from '../runner';
 let mockWorker: {
   postMessage: ReturnType<typeof vi.fn>;
   terminate: ReturnType<typeof vi.fn>;
-  onmessage: ((ev: any) => void) | null;
-  onerror: ((ev: any) => void) | null;
+  onmessage: ((ev: { data: unknown }) => void) | null;
+  onerror: ((ev: { message: string }) => void) | null;
 };
 
 beforeEach(() => {
@@ -101,8 +101,8 @@ describe('terminateWorker', () => {
     const newMockWorker: {
       postMessage: ReturnType<typeof vi.fn>;
       terminate: ReturnType<typeof vi.fn>;
-      onmessage: ((ev: any) => void) | null;
-      onerror: ((ev: any) => void) | null;
+      onmessage: ((ev: { data: unknown }) => void) | null;
+      onerror: ((ev: { message: string }) => void) | null;
     } = {
       postMessage: vi.fn(),
       terminate: vi.fn(),

@@ -1,4 +1,5 @@
 import { handleApiError, withErrorHandling, withErrorHandlingParams } from '../api';
+import { type NextRequest } from 'next/server';
 
 async function parseJson(res: Response) {
   return res.json() as Promise<{ error: string; status: number; details?: unknown }>;
@@ -62,7 +63,7 @@ describe('withErrorHandling', () => {
   it('calls handler and returns its response', async () => {
     const handler = vi.fn().mockResolvedValue(new Response('ok', { status: 200 }));
     const wrapped = withErrorHandling(handler);
-    const req = {} as any;
+    const req = {} as unknown as NextRequest;
     const res = await wrapped(req);
     expect(handler).toHaveBeenCalledWith(req);
     expect(res.status).toBe(200);
@@ -71,7 +72,7 @@ describe('withErrorHandling', () => {
   it('catches error and returns 500', async () => {
     const handler = vi.fn().mockRejectedValue(new Error('broken'));
     const wrapped = withErrorHandling(handler);
-    const req = {} as any;
+    const req = {} as unknown as NextRequest;
     const res = await wrapped(req);
     expect(res.status).toBe(500);
     const body = await parseJson(res);
@@ -83,7 +84,7 @@ describe('withErrorHandlingParams', () => {
   it('passes req and params to handler', async () => {
     const handler = vi.fn().mockResolvedValue(new Response('ok', { status: 200 }));
     const wrapped = withErrorHandlingParams(handler);
-    const req = {} as any;
+    const req = {} as unknown as NextRequest;
     const params = Promise.resolve({ id: '123' } as Record<string, string>);
     const res = await wrapped(req, params);
     expect(handler).toHaveBeenCalledWith(req, params);
@@ -93,7 +94,7 @@ describe('withErrorHandlingParams', () => {
   it('catches error and returns 500', async () => {
     const handler = vi.fn().mockRejectedValue(new Error('params broken'));
     const wrapped = withErrorHandlingParams(handler);
-    const req = {} as any;
+    const req = {} as unknown as NextRequest;
     const params = Promise.resolve({} as Record<string, string>);
     const res = await wrapped(req, params);
     expect(res.status).toBe(500);
