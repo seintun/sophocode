@@ -361,7 +361,12 @@ export default function SessionPage() {
                   )}
                 </div>
                 <div className="flex-1 min-h-0">
-                  <CodeEditor value={code} onChange={handleCodeChange} />
+                  <CodeEditor
+                    value={code}
+                    onChange={handleCodeChange}
+                    onFocus={() => {}}
+                    onBlur={() => {}}
+                  />
                 </div>
               </div>
             }
@@ -386,6 +391,16 @@ export default function SessionPage() {
                 showFailureButton={hasFailures}
               />
             }
+            onRunTests={handleRunTests}
+            onAskCoach={hasFailures ? () => handleAskAboutFailure('') : undefined}
+            isRunning={isRunning}
+            testResultsData={
+              testRunResults
+                ? { passed: testRunResults.passed, total: testRunResults.total }
+                : undefined
+            }
+            problemTitle={session.problem.title}
+            constraints={session.problem.constraints}
           />
         </ErrorBoundary>
       </div>

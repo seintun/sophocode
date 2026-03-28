@@ -19,9 +19,17 @@ interface CodeEditorProps {
   value: string;
   onChange: (value: string) => void;
   language?: string;
+  onFocus?: () => void;
+  onBlur?: () => void;
 }
 
-export function CodeEditor({ value, onChange, language = 'python' }: CodeEditorProps) {
+export function CodeEditor({
+  value,
+  onChange,
+  language = 'python',
+  onFocus,
+  onBlur,
+}: CodeEditorProps) {
   const timerRef = useRef<ReturnType<typeof setTimeout>>(null);
   const editorRef = useRef<any>(null);
   const [mounted, setMounted] = useState(false);
@@ -49,36 +57,47 @@ export function CodeEditor({ value, onChange, language = 'python' }: CodeEditorP
     [onChange],
   );
 
-  const handleEditorDidMount = useCallback((editor: any, monaco: any) => {
-    editorRef.current = editor;
+  const handleEditorDidMount = useCallback(
+    (editor: any, monaco: any) => {
+      editorRef.current = editor;
 
-    // Configure Monaco to use blob workers to avoid network cancellation errors
-    monaco.editor.defineTheme('sophocode-dark', {
-      base: 'vs-dark',
-      inherit: true,
-      rules: [
-        { token: '', foreground: 'E8ECF4', background: '080C18' },
-        { token: 'comment', foreground: '5C6578' },
-        { token: 'keyword', foreground: '2DD4BF' },
-        { token: 'string', foreground: '10B981' },
-        { token: 'number', foreground: 'F59E0B' },
-        { token: 'type', foreground: '818CF8' },
-        { token: 'function', foreground: '818CF8' },
-      ],
-      colors: {
-        'editor.background': '#080C18',
-        'editor.foreground': '#E8ECF4',
-        'editor.lineHighlightBackground': '#111827',
-        'editor.selectionBackground': '#1C243980',
-        'editorCursor.foreground': '#2DD4BF',
-        'editorLineNumber.foreground': '#5C6578',
-        'editorLineNumber.activeForeground': '#8B95A8',
-        'editor.inactiveSelectionBackground': '#1C243940',
-        'editorIndentGuide.background': '#111827',
-        'editorIndentGuide.activeBackground': '#1E2A3E',
-      },
-    });
-  }, []);
+      editor.onDidFocusEditorWidget(() => {
+        onFocus?.();
+      });
+
+      editor.onDidBlurEditorWidget(() => {
+        onBlur?.();
+      });
+
+      // Configure Monaco to use blob workers to avoid network cancellation errors
+      monaco.editor.defineTheme('sophocode-dark', {
+        base: 'vs-dark',
+        inherit: true,
+        rules: [
+          { token: '', foreground: 'E8ECF4', background: '080C18' },
+          { token: 'comment', foreground: '5C6578' },
+          { token: 'keyword', foreground: '2DD4BF' },
+          { token: 'string', foreground: '10B981' },
+          { token: 'number', foreground: 'F59E0B' },
+          { token: 'type', foreground: '818CF8' },
+          { token: 'function', foreground: '818CF8' },
+        ],
+        colors: {
+          'editor.background': '#080C18',
+          'editor.foreground': '#E8ECF4',
+          'editor.lineHighlightBackground': '#111827',
+          'editor.selectionBackground': '#1C243980',
+          'editorCursor.foreground': '#2DD4BF',
+          'editorLineNumber.foreground': '#5C6578',
+          'editorLineNumber.activeForeground': '#8B95A8',
+          'editor.inactiveSelectionBackground': '#1C243940',
+          'editorIndentGuide.background': '#111827',
+          'editorIndentGuide.activeBackground': '#1E2A3E',
+        },
+      });
+    },
+    [onFocus, onBlur],
+  );
 
   const options = useMemo(
     () => ({
