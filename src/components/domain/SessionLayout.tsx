@@ -90,7 +90,7 @@ export function SessionLayout({ problem, editor, testResults, coach }: SessionLa
             role="tabpanel"
             id="panel-code"
             aria-labelledby="tab-code"
-            className={activeTab === 'code' ? 'flex-1 flex flex-col min-h-0' : 'hidden'}
+            className={activeTab === 'code' ? 'flex-1 flex flex-col min-h-0 h-full' : 'hidden'}
           >
             {activeTab === 'code' && (
               <div
