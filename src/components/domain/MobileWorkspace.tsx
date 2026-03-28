@@ -24,9 +24,6 @@ interface MobileWorkspaceProps {
   editor: ReactNode;
   testResults: ReactNode;
   coach: ReactNode;
-  onRunTests?: () => void;
-  onAskCoach?: () => void;
-  isRunning?: boolean;
   testResultsData?: { passed: number; total: number };
   onEditorFocus?: () => void;
   onEditorBlur?: () => void;
@@ -37,8 +34,12 @@ interface MobileWorkspaceProps {
 export interface MobileWorkspaceHandle {
   /** Call when Monaco editor gains focus. Triggers immersive mode when keyboard is open. */
   focusEditor: () => void;
-  /** Call when Monaco editor loses focus. Exits immersive mode. */
+  /** Call when Monaco editor losing focus. Exits immersive mode. */
   blurEditor: () => void;
+  /** Programmatically open the Test Results sheet */
+  openTestResults: () => void;
+  /** Programmatically switch to and open the Coach sheet */
+  openCoach: () => void;
 }
 
 // ── Constants ────────────────────────────────────────────────────────────────
@@ -50,7 +51,6 @@ const TABS: Array<{ key: TabKey; label: string }> = [
 ];
 
 const TAB_BAR_HEIGHT = 48;
-const ACTION_BAR_BOTTOM = TAB_BAR_HEIGHT + 8;
 
 // ── Component ────────────────────────────────────────────────────────────────
 
@@ -61,9 +61,6 @@ export const MobileWorkspace = forwardRef<MobileWorkspaceHandle, MobileWorkspace
       editor,
       testResults,
       coach,
-      onRunTests,
-      onAskCoach,
-      isRunning = false,
       testResultsData,
       onEditorFocus,
       onEditorBlur,
@@ -113,6 +110,9 @@ export const MobileWorkspace = forwardRef<MobileWorkspaceHandle, MobileWorkspace
       (tab: TabKey) => {
         setActiveTab(tab);
 
+        // Always close test results when navigating away
+        testResultsSheet.close();
+
         if (tab === 'code') {
           problemSheet.close();
           coachSheet.close();
@@ -124,7 +124,7 @@ export const MobileWorkspace = forwardRef<MobileWorkspaceHandle, MobileWorkspace
           coachSheet.toggle();
         }
       },
-      [problemSheet, coachSheet],
+      [problemSheet, coachSheet, testResultsSheet],
     );
 
     // ── Editor focus / blur → immersive mode ────────────────────────────────
@@ -164,8 +164,10 @@ export const MobileWorkspace = forwardRef<MobileWorkspaceHandle, MobileWorkspace
       () => ({
         focusEditor: handleEditorFocus,
         blurEditor: handleEditorBlur,
+        openTestResults: testResultsSheet.open,
+        openCoach: () => handleTabChange('coach'),
       }),
-      [handleEditorFocus, handleEditorBlur],
+      [handleEditorFocus, handleEditorBlur, testResultsSheet.open, handleTabChange],
     );
 
     // ── Dismiss pill: show after 1s of entering immersive mode ──────────────
@@ -266,7 +268,7 @@ export const MobileWorkspace = forwardRef<MobileWorkspaceHandle, MobileWorkspace
         {/* ── Test Results Bottom Sheet (z:20, draggable) ────────────────── */}
         <BottomSheet
           open={testResultsSheet.isOpen}
-          height="half"
+          height="large"
           zIndex={20}
           onClose={testResultsSheet.close}
         >
@@ -277,53 +279,6 @@ export const MobileWorkspace = forwardRef<MobileWorkspaceHandle, MobileWorkspace
         <BottomSheet open={coachSheet.isOpen} height="large" zIndex={30} onClose={coachSheet.close}>
           {coach}
         </BottomSheet>
-
-        {/* ── Floating Action Bar ────────────────────────────────────────── */}
-        {!isImmersive && activeTab === 'code' && (
-          <div
-            className="pointer-events-none absolute left-0 right-0 z-40 flex items-center justify-center gap-3 px-4"
-            style={{ bottom: ACTION_BAR_BOTTOM }}
-          >
-            {onRunTests && (
-              <button
-                type="button"
-                onClick={onRunTests}
-                disabled={isRunning}
-                className={cn(
-                  'pointer-events-auto flex items-center gap-2 rounded-full px-5 py-2.5',
-                  'bg-[var(--color-accent)] text-sm font-semibold text-[var(--color-bg-primary)]',
-                  'shadow-lg transition-opacity',
-                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]',
-                  'active:opacity-80',
-                  isRunning && 'opacity-60',
-                )}
-              >
-                {isRunning ? (
-                  <span
-                    aria-hidden="true"
-                    className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"
-                  />
-                ) : null}
-                {isRunning ? 'Running\u2026' : 'Run Tests'}
-              </button>
-            )}
-            {onAskCoach && (
-              <button
-                type="button"
-                onClick={onAskCoach}
-                className={cn(
-                  'pointer-events-auto rounded-full px-4 py-2.5',
-                  'border border-[var(--color-border)] bg-[var(--color-bg-elevated)]',
-                  'text-sm font-medium text-[var(--color-text-primary)]',
-                  'transition-colors hover:bg-[var(--color-bg-secondary)]',
-                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]',
-                )}
-              >
-                Ask Coach
-              </button>
-            )}
-          </div>
-        )}
 
         {/* ── Bottom Tab Bar (z:40, hidden in immersive) ─────────────────── */}
         {!isImmersive && (
