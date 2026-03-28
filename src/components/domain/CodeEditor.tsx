@@ -136,19 +136,17 @@ export function CodeEditor({
   }
 
   return (
-    <div aria-label="Code editor" className="relative h-full w-full">
-      <div className="absolute inset-0">
-        <MonacoEditor
-          key="monaco-editor-instance"
-          height="100%"
-          language={language}
-          value={value}
-          theme="sophocode-dark"
-          onChange={handleChange}
-          onMount={handleEditorDidMount}
-          options={options}
-        />
-      </div>
+    <div aria-label="Code editor" className="h-full bg-[var(--color-bg-editor)]">
+      <MonacoEditor
+        key="monaco-editor-instance"
+        height="100%"
+        language={language}
+        value={value}
+        theme="sophocode-dark"
+        onChange={handleChange}
+        onMount={handleEditorDidMount}
+        options={options}
+      />
     </div>
   );
 }
