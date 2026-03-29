@@ -472,6 +472,7 @@ function SessionContent({ session, sessionId }: { session: SessionData; sessionI
             workspaceRef={workspaceRef}
             onRunTests={handleRunTests}
             isRunning={isRunning || pyodideLoading}
+            mode={session.mode ?? 'SELF_PRACTICE'}
             problem={problemPanel}
             editor={editorPanel}
             testResults={testResultsPanel}
@@ -483,6 +484,7 @@ function SessionContent({ session, sessionId }: { session: SessionData; sessionI
             }
             problemTitle={session.problem.title}
             constraints={session.problem.constraints}
+            codeIsEmpty={code.trim().length === 0}
           />
         </ErrorBoundary>
       </div>

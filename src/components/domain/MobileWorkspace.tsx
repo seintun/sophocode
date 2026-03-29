@@ -31,6 +31,7 @@ interface MobileWorkspaceProps {
   constraints?: string[];
   onRunTests?: () => void;
   isRunning?: boolean;
+  onSheetOpenChange?: (isOpen: boolean) => void;
 }
 
 export interface MobileWorkspaceHandle {
@@ -155,6 +156,7 @@ export const MobileWorkspace = forwardRef<MobileWorkspaceHandle, MobileWorkspace
       constraints = [],
       onRunTests,
       isRunning,
+      onSheetOpenChange,
     },
     ref,
   ) {
@@ -187,6 +189,7 @@ export const MobileWorkspace = forwardRef<MobileWorkspaceHandle, MobileWorkspace
           coachSheet.close();
           testResultsSheet.close();
           setActiveTab('code');
+          onSheetOpenChange?.(false);
           return;
         }
 
@@ -200,14 +203,19 @@ export const MobileWorkspace = forwardRef<MobileWorkspaceHandle, MobileWorkspace
         if (tab === 'run') {
           onRunTests?.();
           testResultsSheet.open();
+          onSheetOpenChange?.(true);
         } else if (tab === 'problem') {
           problemSheet.open();
+          onSheetOpenChange?.(true);
         } else if (tab === 'coach') {
           coachSheet.open();
+          onSheetOpenChange?.(true);
+        } else {
+          // code: no sheet, just the editor
+          onSheetOpenChange?.(false);
         }
-        // code: no sheet, just the editor
       },
-      [activeTab, problemSheet, coachSheet, testResultsSheet, onRunTests],
+      [activeTab, problemSheet, coachSheet, testResultsSheet, onRunTests, onSheetOpenChange],
     );
 
     // ── Swipe navigation ────────────────────────────────────────────────────
@@ -231,7 +239,8 @@ export const MobileWorkspace = forwardRef<MobileWorkspaceHandle, MobileWorkspace
     const handleCloseCoach = useCallback(() => {
       coachSheet.close();
       if (activeTab === 'coach') setActiveTab('code');
-    }, [coachSheet, activeTab]);
+      onSheetOpenChange?.(false);
+    }, [coachSheet, activeTab, onSheetOpenChange]);
 
     // ── Editor focus / blur → immersive mode ────────────────────────────────
     // Exposed via ref so the parent can wire Monaco's onFocus/onBlur callbacks.
