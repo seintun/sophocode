@@ -1,29 +1,45 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/prisma';
 import type { SessionStatus, SessionOutcome } from '@/generated/prisma/enums';
-import { handleApiError } from '@/lib/errors/api';
+import { handleApiError, withAuthAndId } from '@/lib/errors/api';
+import { requireOwnership } from '@/lib/auth/session-auth';
 
-export async function GET(
+async function getHandler(
   _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
+  { params, guestId }: { params: Promise<{ id: string }>; guestId: string },
 ): Promise<Response> {
   try {
     const { id } = await params;
+    await requireOwnership(id, guestId);
 
-    const session = await prisma.session.findFirst({
+    const session = await prisma.session.findUnique({
       where: { id },
       include: {
         problem: {
-          include: {
+          select: {
+            id: true,
+            title: true,
+            slug: true,
+            statement: true,
+            examples: true,
+            constraints: true,
+            starterCode: true,
+            difficulty: true,
+            pattern: true,
             testCases: {
-              where: { isHidden: false },
+              select: {
+                id: true,
+                input: true,
+                expected: true,
+                isHidden: true,
+              },
               orderBy: { order: 'asc' },
             },
           },
         },
         runs: {
           orderBy: { createdAt: 'desc' },
-          take: 10,
+          take: 5,
         },
         hints: {
           orderBy: { createdAt: 'asc' },
@@ -41,33 +57,29 @@ export async function GET(
   }
 }
 
-export async function PATCH(
+async function patchHandler(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
+  { params, guestId }: { params: Promise<{ id: string }>; guestId: string },
 ): Promise<Response> {
   try {
     const { id } = await params;
+    await requireOwnership(id, guestId);
+
     const body = await request.json();
-    const { code, status, outcome } = body as {
-      code?: string;
+    const { status, code, outcome } = body as {
       status?: SessionStatus;
+      code?: string;
       outcome?: SessionOutcome;
     };
 
-    const data: Record<string, unknown> = {};
-    if (code !== undefined) data.code = code;
-    if (status !== undefined) data.status = status;
-    if (outcome !== undefined) data.outcome = outcome;
-    if (status === 'COMPLETED') data.completedAt = new Date();
-
-    if (Object.keys(data).length === 0) {
-      return NextResponse.json({ error: 'No fields to update' }, { status: 400 });
-    }
-
     const session = await prisma.session.update({
       where: { id },
-      data,
-      select: { id: true, status: true, outcome: true },
+      data: {
+        status,
+        code,
+        outcome,
+        completedAt: status === 'COMPLETED' ? new Date() : undefined,
+      },
     });
 
     return NextResponse.json(session);
@@ -75,3 +87,6 @@ export async function PATCH(
     return handleApiError(new Response('', { status: 500 }), error, 'PATCH /api/sessions/[id]');
   }
 }
+
+export const GET = withAuthAndId(getHandler);
+export const PATCH = withAuthAndId(patchHandler);

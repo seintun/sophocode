@@ -4,10 +4,12 @@ import { MODELS } from '@/lib/ai/models';
 import { buildHintPrompt } from '@/lib/ai/prompts/hint';
 import { handleApiError } from '@/lib/errors/api';
 import { isSessionMode } from '@/lib/sophia';
+import { withRateLimit } from '@/lib/ratelimit';
+import { type NextRequest } from 'next/server';
 
 const VALID_LEVELS = [1, 2, 3] as const;
 
-export async function POST(req: Request): Promise<Response> {
+async function handler(req: NextRequest): Promise<Response> {
   try {
     if (!process.env.OPENROUTER_API_KEY) {
       return new Response('AI features temporarily unavailable', { status: 503 });
@@ -45,3 +47,5 @@ export async function POST(req: Request): Promise<Response> {
     return handleApiError(new Response('', { status: 500 }), error, 'POST /api/ai/hint');
   }
 }
+
+export const POST = withRateLimit(handler);

@@ -1,13 +1,16 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/prisma';
 import { withErrorHandling } from '@/lib/errors/api';
+import { getGuestIdFromCookie } from '@/lib/guest';
+import { cookies } from 'next/headers';
 
-async function handler(request: NextRequest): Promise<Response> {
+async function handler(_request: NextRequest): Promise<Response> {
   try {
-    const guestId = request.nextUrl.searchParams.get('guestId');
+    const cookieStore = await cookies();
+    const guestId = getGuestIdFromCookie(cookieStore);
 
     if (!guestId) {
-      return NextResponse.json({ error: 'Missing guestId' }, { status: 400 });
+      return NextResponse.json({ error: 'Unauthorized: Guest ID missing' }, { status: 401 });
     }
 
     const now = new Date();
@@ -78,6 +81,7 @@ async function handler(request: NextRequest): Promise<Response> {
       }),
       prisma.userProblemState.findMany({
         where: { guestId, attemptCount: { gt: 0 } },
+        take: 50, // Prevent unbounded growth
         orderBy: { lastAttemptedAt: 'desc' },
         select: {
           mastery: true,
@@ -121,19 +125,26 @@ async function handler(request: NextRequest): Promise<Response> {
       };
     });
 
-    return NextResponse.json({
-      stats: {
-        totalSolved,
-        patternsPracticed,
-        sessionsThisWeek,
+    return NextResponse.json(
+      {
+        stats: {
+          totalSolved,
+          patternsPracticed,
+          sessionsThisWeek,
+        },
+        recentSessions,
+        needsRefresh,
+        inProgressProblems,
+        recommendedProblem,
+        patternStats,
+        problemHistory,
       },
-      recentSessions,
-      needsRefresh,
-      inProgressProblems,
-      recommendedProblem,
-      patternStats,
-      problemHistory,
-    });
+      {
+        headers: {
+          'Cache-Control': 'private, max-age=300, stale-while-revalidate=3600',
+        },
+      },
+    );
   } catch (error) {
     console.error('Failed to fetch progress:', error);
     return NextResponse.json({ error: 'Failed to fetch progress' }, { status: 500 });

@@ -1,8 +1,9 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/prisma';
-import { withErrorHandling } from '@/lib/errors/api';
+import { withAuth, validateId } from '@/lib/errors/api';
+import { requireOwnership } from '@/lib/auth/session-auth';
 
-async function handler(request: NextRequest): Promise<Response> {
+async function handler(request: NextRequest, { guestId }: { guestId: string }): Promise<Response> {
   try {
     const body = await request.json();
     const { sessionId, code, results, passed, total } = body as {
@@ -26,6 +27,13 @@ async function handler(request: NextRequest): Promise<Response> {
       );
     }
 
+    if (!validateId(sessionId)) {
+      return NextResponse.json({ error: 'Invalid sessionId format' }, { status: 400 });
+    }
+
+    // Validate ownership before creating the run
+    await requireOwnership(sessionId, guestId);
+
     const run = await prisma.testRun.create({
       data: {
         sessionId,
@@ -43,4 +51,4 @@ async function handler(request: NextRequest): Promise<Response> {
   }
 }
 
-export const POST = withErrorHandling(handler);
+export const POST = withAuth(handler);

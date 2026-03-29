@@ -1,26 +1,22 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/prisma';
-import { handleApiError } from '@/lib/errors/api';
+import { handleApiError, withAuthAndId } from '@/lib/errors/api';
+import { requireOwnership } from '@/lib/auth/session-auth';
 
-export async function POST(
+async function handler(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
+  { params, guestId }: { params: Promise<{ id: string }>; guestId: string },
 ): Promise<Response> {
   try {
     const { id: sessionId } = await params;
+    await requireOwnership(sessionId, guestId);
+
     const body = await req.json();
     const { level, content } = body;
 
     if (level === undefined || !content) {
       return NextResponse.json(
         { error: 'Missing required fields: level, content' },
-        { status: 400 },
-      );
-    }
-
-    if (![1, 2, 3].includes(level)) {
-      return NextResponse.json(
-        { error: 'Invalid hint level. Must be 1, 2, or 3.' },
         { status: 400 },
       );
     }
@@ -42,3 +38,5 @@ export async function POST(
     );
   }
 }
+
+export const POST = withAuthAndId(handler);

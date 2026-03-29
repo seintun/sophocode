@@ -1,13 +1,16 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/prisma';
-import { handleApiError } from '@/lib/errors/api';
+import { handleApiError, withAuthAndId } from '@/lib/errors/api';
+import { requireOwnership } from '@/lib/auth/session-auth';
 
-export async function PATCH(
+async function handler(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
+  { params, guestId }: { params: Promise<{ id: string }>; guestId: string },
 ): Promise<Response> {
   try {
     const { id } = await params;
+    await requireOwnership(id, guestId);
+
     const body = await request.json();
     const { code } = body as { code: string };
 
@@ -18,7 +21,6 @@ export async function PATCH(
     const session = await prisma.session.update({
       where: { id },
       data: { code },
-      select: { id: true, code: true },
     });
 
     return NextResponse.json(session);
@@ -30,3 +32,5 @@ export async function PATCH(
     );
   }
 }
+
+export const PATCH = withAuthAndId(handler);

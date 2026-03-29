@@ -6,19 +6,28 @@ import { MODELS } from '@/lib/ai/models';
 import { buildSummaryPrompt } from '@/lib/ai/prompts/summary';
 import { computeNextMastery, computeNextReviewDate } from '@/lib/mastery';
 import type { MasteryState } from '@/generated/prisma/enums';
-import { handleApiError } from '@/lib/errors/api';
+import { handleApiError, withAuthAndId } from '@/lib/errors/api';
+import { requireOwnership } from '@/lib/auth/session-auth';
 
-export async function POST(
+async function handler(
   _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
+  { params, guestId }: { params: Promise<{ id: string }>; guestId: string },
 ): Promise<Response> {
   try {
     const { id } = await params;
+    await requireOwnership(id, guestId);
 
     const session = await prisma.session.findFirst({
       where: { id },
       include: {
-        problem: true,
+        problem: {
+          select: {
+            id: true,
+            title: true,
+            slug: true,
+            pattern: true,
+          },
+        },
         runs: { orderBy: { createdAt: 'desc' }, take: 1 },
         hints: true,
         feedback: true,
@@ -197,3 +206,5 @@ function parseSummarySections(text: string): {
     return null;
   }
 }
+
+export const POST = withAuthAndId(handler);

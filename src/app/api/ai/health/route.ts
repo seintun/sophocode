@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
+import { withRateLimit } from '@/lib/ratelimit';
 
-export async function GET() {
+async function handler() {
   const apiKey = process.env.OPENROUTER_API_KEY;
 
   if (!apiKey || apiKey === 'your_openrouter_api_key_here') {
@@ -15,12 +16,10 @@ export async function GET() {
     );
   }
 
-  // Optional: In the future, we could add a cached check to OpenRouter's
-  // status endpoint here if needed, but we keep it light to avoid
-  // blocking the main thread.
-
   return NextResponse.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
   });
 }
+
+export const GET = withRateLimit(handler);
