@@ -15,8 +15,12 @@ export default defineConfig({
     url: (() => {
       const url = process.env['DIRECT_URL'] ?? process.env['DATABASE_URL'];
       if (!url) {
-        // Fallback for CI/generation where actual connection is not required
-        if (process.env['CI'] === 'true') {
+        // Fallback for CI/Vercel generation where actual connection is not required
+        if (
+          process.env['CI'] === 'true' ||
+          process.env['CI'] === '1' ||
+          process.env['VERCEL'] === '1'
+        ) {
           return 'postgresql://dummy:dummy@localhost:5432/dummy';
         }
         throw new Error(
