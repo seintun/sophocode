@@ -61,7 +61,10 @@ function cleanError(raw, offset) {
  * Executes a single test case
  */
 function runTestCase(py, code, input, funcName) {
-  const indentedCode = code.split('\n').map((line) => '    ' + line).join('\n');
+  const indentedCode = code
+    .split('\n')
+    .map((line) => '    ' + line)
+    .join('\n');
   const setup = `
 import sys, io, json
 _stdout_capture = io.StringIO()
@@ -78,14 +81,18 @@ try:
   const codeLineOffset = setup.split('\n').length + 1;
   const execution = `
 ${indentedCode}
-${funcName ? `
+${
+  funcName
+    ? `
     try:
         _args = json.loads(${JSON.stringify(input)})
         if isinstance(_args, list): _result = ${funcName}(*_args)
         else: _result = ${funcName}(_args)
         if _result is not None: print(json.dumps(_result))
     except Exception as _e: raise _e
-` : ''}
+`
+    : ''
+}
 except Exception as _e:
     import traceback as _tb
     _error_msg = _tb.format_exc()
@@ -117,12 +124,15 @@ self.onmessage = async function (event) {
     const py = await loadPyodideInstance();
     if (prewarm) return self.postMessage({ status: 'prewarmed' });
 
-    const finalFunctionName = functionName || (code.match(/^[ \t]*def\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\(/m) || [])[1] || null;
+    const finalFunctionName =
+      functionName || (code.match(/^[ \t]*def\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\(/m) || [])[1] || null;
     const results = [];
 
     for (const tc of testCases) {
       let timedOut = false;
-      const timer = setTimeout(() => { timedOut = true; }, timeout);
+      const timer = setTimeout(() => {
+        timedOut = true;
+      }, timeout);
       try {
         const { actual, error } = runTestCase(py, code, tc.input, finalFunctionName);
         const passed = error === undefined && normalize(actual) === normalize(tc.expected);
