@@ -12,6 +12,14 @@ export default defineConfig({
     seed: 'bun ./prisma/seed.ts',
   },
   datasource: {
-    url: process.env['DIRECT_URL'] ?? process.env['DATABASE_URL'] ?? '',
+    url: (() => {
+      const url = process.env['DIRECT_URL'] ?? process.env['DATABASE_URL'];
+      if (!url) {
+        throw new Error(
+          'DATABASE_URL or DIRECT_URL is not set. Please check your environment variables.',
+        );
+      }
+      return url;
+    })(),
   },
 });

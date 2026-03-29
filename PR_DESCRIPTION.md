@@ -1,23 +1,23 @@
 ## Summary
 
-This PR hardens the SophoCode mobile and desktop experience, focusing on reliability, performance, and UI stability. It resolves critical flickering bugs, improves Pyodide execution, achieves a 100% clean lint state, and fixes layout/scrolling issues across all viewports.
+This PR significantly hardens the SophoCode mobile and desktop experience. Key improvements include a new mobile-first workspace architecture (bottom sheets + immersive mode), a more robust Pyodide execution pipeline with explicit function targeting, enhanced AI health monitoring, and a 100% clean lint state.
 
 ## Problem Statement
 
-1.  **UI Jitter**: BottomSheets were resetting entrance animations on every re-render (e.g., during AI streaming), causing a "flashing" effect.
-2.  **Execution Fragility**: Pyodide worker relied on brittle regex to find the entry point, leading to failures with helper functions or comments.
-3.  **Lint Debt**: Multiple non-null assertions and `any` types were triggering CI warnings.
-4.  **Layout/Scrolling Issues**: Nested scroll containers and missing height definitions were causing scrolling to freeze or break sticky headers.
+1.  **Mobile Usability**: The previous tab-based UI was rigid. Bottom bars were often clipped on browsers like Samsung Internet.
+2.  **UI Jitter**: BottomSheets reset entrance animations on every re-render (e.g., during AI streaming), causing a "flashing" effect.
+3.  **Execution Fragility**: Pyodide worker relied on brittle regex to find the entry point, leading to failures with helper functions or comments.
+4.  **Layout/Scrolling Issues**: Nested scroll containers and missing height definitions (vh vs dvh) were causing scrolling to freeze or break sticky headers.
 5.  **Monaco Crash**: A missing theme base property caused an "Illegal theme base!" error.
 
 ## Scope
 
-- Hardened Pyodide worker with explicit `functionName` passing and JSON serialization.
-- Modularized BottomSheet logic into a reusable `useBottomSheetDrag` hook.
-- Implemented an "Entrance Guard" in BottomSheets to prevent animation resets.
-- Achieved a 100% clean lint state by replacing `!` assertions and `any` types with safe alternatives.
-- Fixed layout height issues in `SessionLayout` and `BottomSheet` to restore scrolling.
-- Optimized AI health checks to use a lightweight GET endpoint.
+- **Architecture**: Introduced `MobileWorkspace` with a bottom-sheet based layout and an "Immersive Mode" for distraction-free coding.
+- **Reliability**: Hardened Pyodide worker with explicit `functionName` passing and JSON serialization.
+- **Stability**: Implemented an "Entrance Guard" in BottomSheets to prevent animation resets.
+- **Viewport**: Switched to `dvh` units across all critical mobile layouts to prevent UI clipping.
+- **Quality**: Achieved a 100% clean lint state by replacing `!` assertions and `any` types with safe alternatives.
+- **Performance**: Optimized AI health checks to use a lightweight GET endpoint.
 
 ## User Stories
 

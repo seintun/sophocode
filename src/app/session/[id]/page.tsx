@@ -359,8 +359,8 @@ function SessionContent({ session, sessionId }: { session: SessionData; sessionI
           <CodeEditor
             value={code}
             onChange={handleCodeChange}
-            onFocus={() => {}}
-            onBlur={() => {}}
+            onFocus={() => workspaceRef.current?.focusEditor()}
+            onBlur={() => workspaceRef.current?.blurEditor()}
           />
         </div>
       </div>

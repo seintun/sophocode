@@ -11,45 +11,54 @@ type StandaloneCodeEditor = Parameters<
 const useIsomorphicLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect;
 
 // ── Hack to Ignore Harmless Monaco Cancellation Errors ───────────────────────
-if (
-  process.env.NODE_ENV !== 'production' &&
-  typeof window !== 'undefined' &&
-  !(window as unknown as Record<string, unknown>).__monaco_hack_applied
-) {
-  (window as unknown as Record<string, unknown>).__monaco_hack_applied = true;
-  // 1. Intercept console.error
-  const originalError = console.error;
-  console.error = (...args: unknown[]) => {
-    const isMonacoCanceledError = args.some(
-      (arg) =>
-        arg &&
-        ((typeof arg === 'string' && arg.includes('Canceled')) ||
-          (typeof arg === 'object' &&
-            arg !== null &&
-            ('name' in arg || 'message' in arg) &&
-            ((arg as Record<string, unknown>).name === 'Canceled' ||
-              (arg as Record<string, string>).message?.includes('Canceled')))),
-    );
+/**
+ * Monaco (and its underlyng Promise implementation) can sometimes throw
+ * "Canceled" errors when an editor is disposed or a provider is interrupted.
+ * These are harmless but can trigger Next.js error overlays in development.
+ */
+function useMonacoCancellationHack() {
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'production') return;
 
-    if (isMonacoCanceledError) {
-      return; // Suppress harmless Monaco internal promise cancellations
-    }
-    originalError.apply(console, args);
-  };
+    // 1. Intercept console.error to suppress "Canceled" strings
+    const originalError = console.error;
+    console.error = (...args: unknown[]) => {
+      const isMonacoCanceledError = args.some(
+        (arg) =>
+          arg &&
+          ((typeof arg === 'string' && arg.includes('Canceled')) ||
+            (typeof arg === 'object' &&
+              arg !== null &&
+              ('name' in arg || 'message' in arg) &&
+              ((arg as Record<string, unknown>).name === 'Canceled' ||
+                (arg as Record<string, string>).message?.includes('Canceled')))),
+      );
 
-  // 2. Intercept unhandled promise rejections
-  window.addEventListener('unhandledrejection', (event) => {
-    const reason = event.reason;
-    if (
-      reason &&
-      (reason === 'Canceled' ||
-        reason.name === 'Canceled' ||
-        reason.message === 'Canceled' ||
-        reason.message?.includes('Canceled'))
-    ) {
-      event.preventDefault(); // Stop Next.js dev overlay from catching it
-    }
-  });
+      if (isMonacoCanceledError) return;
+      originalError.apply(console, args);
+    };
+
+    // 2. Intercept unhandled promise rejections for "Canceled"
+    const handleRejection = (event: PromiseRejectionEvent) => {
+      const reason = event.reason;
+      if (
+        reason &&
+        (reason === 'Canceled' ||
+          reason.name === 'Canceled' ||
+          reason.message === 'Canceled' ||
+          reason.message?.includes('Canceled'))
+      ) {
+        event.preventDefault(); // Stop Next.js dev overlay
+      }
+    };
+
+    window.addEventListener('unhandledrejection', handleRejection);
+
+    return () => {
+      console.error = originalError;
+      window.removeEventListener('unhandledrejection', handleRejection);
+    };
+  }, []);
 }
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -68,6 +77,7 @@ export function CodeEditor({
   onFocus,
   onBlur,
 }: CodeEditorProps) {
+  useMonacoCancellationHack();
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const editorRef = useRef<StandaloneCodeEditor | null>(null);

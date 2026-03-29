@@ -31,6 +31,7 @@ describe('runTests', () => {
     expect(mockWorker.postMessage).toHaveBeenCalledWith({
       code: 'print(1)',
       testCases: sampleTestCases,
+      functionName: undefined,
       timeout: 5000,
     });
 

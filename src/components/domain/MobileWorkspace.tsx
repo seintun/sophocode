@@ -177,13 +177,6 @@ export const MobileWorkspace = forwardRef<MobileWorkspaceHandle, MobileWorkspace
 
     // ── Derived state ───────────────────────────────────────────────────────
 
-    // ── Swipe navigation ────────────────────────────────────────────────────
-    const { swipeHandlers } = useSwipeNavigation({
-      tabs: TABS.filter((t) => t.key !== 'run').map((t) => t.key),
-      currentTab: activeTab,
-      onTabChange: (tab) => handleTabChange(tab as TabKey),
-    });
-
     // ── Tab change handler ──────────────────────────────────────────────────
 
     const handleTabChange = useCallback(
@@ -216,6 +209,13 @@ export const MobileWorkspace = forwardRef<MobileWorkspaceHandle, MobileWorkspace
       },
       [activeTab, problemSheet, coachSheet, testResultsSheet, onRunTests],
     );
+
+    // ── Swipe navigation ────────────────────────────────────────────────────
+    const { swipeHandlers } = useSwipeNavigation({
+      tabs: TABS.filter((t) => t.key !== 'run').map((t) => t.key),
+      currentTab: activeTab,
+      onTabChange: (tab) => handleTabChange(tab as TabKey),
+    });
 
     // ── Handlers for closing sheets via backdrop/drag ───────────────────────
     const handleCloseProblem = useCallback(() => {

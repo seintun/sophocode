@@ -167,7 +167,7 @@ export const BottomSheet: FC<BottomSheetProps> = ({
       backdrop.style.transition = 'none';
       sheet.style.transform = `translateY(${CLOSED_TRANSLATE})`;
       backdrop.style.opacity = '0';
-      sheet.style.height = SNAP_HEIGHTS[currentHeight];
+      sheet.style.height = SNAP_HEIGHTS[height];
 
       // Force reflow so the browser registers the starting position
       void sheet.offsetHeight;
