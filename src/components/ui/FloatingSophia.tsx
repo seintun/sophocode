@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, forwardRef } from 'react';
 import Image from 'next/image';
 import { SOPHIA_AVATAR, SOPHIA_MODES } from '@/lib/sophia';
 import type { SessionMode } from '@/lib/sophia';
@@ -8,6 +8,7 @@ import type { SessionMode } from '@/lib/sophia';
 interface FloatingSophiaProps {
   currentMessage: string | null;
   isHidden: boolean;
+  isDimmed: boolean;
   mode: SessionMode;
   onClick: () => void;
   onDismiss: () => void;
@@ -16,191 +17,243 @@ interface FloatingSophiaProps {
 const CHAR_DELAY_MS = 30;
 const AUTO_DISMISS_MS = 7_000;
 
-export function FloatingSophia({
-  currentMessage,
-  isHidden,
-  mode,
-  onClick,
-  onDismiss,
-}: FloatingSophiaProps) {
-  const [avatarError, setAvatarError] = useState(false);
-  const [displayed, setDisplayed] = useState('');
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const dismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const config = SOPHIA_MODES[mode] ?? SOPHIA_MODES.SELF_PRACTICE;
+export const FloatingSophia = forwardRef<HTMLButtonElement, FloatingSophiaProps>(
+  function FloatingSophia({ currentMessage, isHidden, isDimmed, mode, onClick, onDismiss }, ref) {
+    const [avatarError, setAvatarError] = useState(false);
+    const [displayed, setDisplayed] = useState('');
+    const [hasMounted, setHasMounted] = useState(false);
+    const [isBouncing, setIsBouncing] = useState(false);
+    const [isDismissing, setIsDismissing] = useState(false);
+    const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    const dismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const prevMessageRef = useRef<string | null>(null);
+    const config = SOPHIA_MODES[mode] ?? SOPHIA_MODES.SELF_PRACTICE;
 
-  // Typewriter effect for bubble text
-  useEffect(() => {
-    if (!currentMessage) {
+    useEffect(() => {
+      setHasMounted(true);
+    }, []);
+
+    // Typewriter effect for bubble text
+    useEffect(() => {
+      if (!currentMessage) {
+        setDisplayed('');
+        if (intervalRef.current) {
+          clearInterval(intervalRef.current);
+          intervalRef.current = null;
+        }
+        return;
+      }
+
       setDisplayed('');
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
-      return;
-    }
+      let i = 0;
+      intervalRef.current = setInterval(() => {
+        i++;
+        setDisplayed(currentMessage.slice(0, i));
+        if (i >= currentMessage.length) {
+          if (intervalRef.current) clearInterval(intervalRef.current);
+          intervalRef.current = null;
+        }
+      }, CHAR_DELAY_MS);
 
-    setDisplayed('');
-    let i = 0;
-    intervalRef.current = setInterval(() => {
-      i++;
-      setDisplayed(currentMessage.slice(0, i));
-      if (i >= currentMessage.length) {
-        if (intervalRef.current) clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
-    }, CHAR_DELAY_MS);
+      return () => {
+        if (intervalRef.current) {
+          clearInterval(intervalRef.current);
+          intervalRef.current = null;
+        }
+      };
+    }, [currentMessage]);
 
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
-    };
-  }, [currentMessage]);
-
-  // Auto-dismiss timer
-  useEffect(() => {
-    if (!currentMessage) {
-      if (dismissTimerRef.current) {
-        clearTimeout(dismissTimerRef.current);
-        dismissTimerRef.current = null;
-      }
-      return;
-    }
-
-    dismissTimerRef.current = setTimeout(() => {
-      onDismiss();
-    }, AUTO_DISMISS_MS);
-
-    return () => {
-      if (dismissTimerRef.current) {
-        clearTimeout(dismissTimerRef.current);
-        dismissTimerRef.current = null;
-      }
-    };
-  }, [currentMessage, onDismiss]);
-
-  const skipTypewriter = useCallback(() => {
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
-    }
-    if (currentMessage) {
-      setDisplayed(currentMessage);
-    }
-  }, [currentMessage]);
-
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        onClick();
-      }
-      if (e.key === 'Escape') {
-        e.preventDefault();
+    const handleDismiss = useCallback(() => {
+      setIsDismissing(true);
+      setTimeout(() => {
         onDismiss();
+        setIsDismissing(false);
+      }, 150);
+    }, [onDismiss]);
+
+    // Auto-dismiss timer
+    useEffect(() => {
+      if (!currentMessage) {
+        if (dismissTimerRef.current) {
+          clearTimeout(dismissTimerRef.current);
+          dismissTimerRef.current = null;
+        }
+        return;
       }
-    },
-    [onClick, onDismiss],
-  );
 
-  const handleBubbleClick = useCallback(
-    (e: React.MouseEvent) => {
-      e.stopPropagation();
-      skipTypewriter();
-    },
-    [skipTypewriter],
-  );
+      dismissTimerRef.current = setTimeout(() => {
+        handleDismiss();
+      }, AUTO_DISMISS_MS);
 
-  // Don't render when coach is fully open (plan: isVisible=false when coach open)
-  if (isHidden) return null;
+      return () => {
+        if (dismissTimerRef.current) {
+          clearTimeout(dismissTimerRef.current);
+          dismissTimerRef.current = null;
+        }
+      };
+    }, [currentMessage, handleDismiss]);
 
-  return (
-    <div className="fixed bottom-4 left-4 z-40 md:bottom-4 bottom-[120px]" style={{ opacity: 0.8 }}>
-      <div className="flex items-end gap-2">
-        {/* Avatar circle (left side) */}
-        <button
-          type="button"
-          role="button"
-          tabIndex={0}
-          aria-label="Open Sophia coach"
-          onClick={onClick}
-          onKeyDown={handleKeyDown}
-          className="shrink-0 rounded-full transition-opacity duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] hover:opacity-100"
-          style={{ opacity: 0.8 }}
-        >
-          {!avatarError ? (
-            <div
-              className="relative h-10 w-10 overflow-hidden rounded-full"
-              style={{ animation: currentMessage ? 'none' : 'glow 3s ease-in-out infinite' }}
+    const skipTypewriter = useCallback(() => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+      if (currentMessage) {
+        setDisplayed(currentMessage);
+      }
+    }, [currentMessage]);
+
+    const handleKeyDown = useCallback(
+      (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onClick();
+        }
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          handleDismiss();
+        }
+      },
+      [onClick, handleDismiss],
+    );
+
+    const handleBubbleClick = useCallback(
+      (e: React.MouseEvent) => {
+        e.stopPropagation();
+        skipTypewriter();
+      },
+      [skipTypewriter],
+    );
+
+    useEffect(() => {
+      if (currentMessage && !prevMessageRef.current) {
+        setIsBouncing(true);
+        const timer = setTimeout(() => setIsBouncing(false), 400);
+        prevMessageRef.current = currentMessage;
+        return () => clearTimeout(timer);
+      }
+      prevMessageRef.current = currentMessage;
+      return undefined;
+    }, [currentMessage]);
+
+    // Don't render when coach is fully open (plan: isVisible=false when coach open)
+    if (isHidden) return null;
+
+    return (
+      <div
+        className="fixed bottom-[120px] left-4 z-40 md:bottom-4"
+        style={
+          {
+            opacity: isDimmed ? 0.3 : 0.8,
+            animation: hasMounted
+              ? undefined
+              : 'sophiaEntrance 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards',
+            '--sophia-glow-color': config.colors.soft,
+          } as React.CSSProperties
+        }
+      >
+        <div className="flex items-end gap-2">
+          <div className="relative group">
+            <button
+              type="button"
+              role="button"
+              tabIndex={0}
+              aria-label="Open Sophia coach"
+              onClick={onClick}
+              onKeyDown={handleKeyDown}
+              ref={ref}
+              className="shrink-0 rounded-full transition-opacity duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] hover:opacity-100"
+              style={{ opacity: 0.8 }}
             >
-              <Image
-                src={SOPHIA_AVATAR}
-                alt="Sophia"
-                fill
-                sizes="40px"
-                quality={90}
-                style={{ objectFit: 'contain' }}
-                onError={() => setAvatarError(true)}
-              />
-            </div>
-          ) : (
-            <div
-              className="flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold text-white"
-              style={{ backgroundColor: config.colors.primary }}
-            >
-              S
-            </div>
-          )}
-        </button>
-
-        {/* Speech bubble (right of avatar) */}
-        {currentMessage && (
-          <div className="relative max-w-[200px]" style={{ animation: 'fadeIn 0.2s ease-out' }}>
-            {/* Tail pointing left toward avatar */}
-            <div
-              className="absolute -left-1.5 bottom-2.5 h-0 w-0"
-              style={{
-                borderTop: '5px solid transparent',
-                borderBottom: '5px solid transparent',
-                borderRight: `6px solid ${config.colors.primary}`,
-              }}
-            />
-            <div
-              role="region"
-              aria-live="polite"
-              aria-label="Sophia says"
-              onClick={handleBubbleClick}
-              className="relative cursor-pointer rounded-lg px-3 py-2 text-xs leading-relaxed"
-              style={{
-                backgroundColor: config.colors.bg,
-                borderLeft: `2px solid ${config.colors.primary}`,
-              }}
-            >
-              {/* Invisible full text reserves height */}
-              <span aria-hidden="true" className="invisible select-none">
-                {currentMessage}
-              </span>
-              <span
-                className="absolute inset-0 px-3 py-2 text-xs leading-relaxed"
-                style={{ color: config.colors.text }}
-              >
-                {displayed}
-                {displayed.length < currentMessage.length && (
-                  <span
-                    className="ml-0.5 inline-block h-2.5 w-0.5 animate-pulse"
-                    style={{ backgroundColor: config.colors.primary }}
-                    aria-hidden="true"
+              {!avatarError ? (
+                <div
+                  className="relative h-10 w-10 overflow-hidden rounded-full"
+                  style={{
+                    animation: isBouncing
+                      ? 'sophiaBounce 0.4s ease-out'
+                      : currentMessage
+                        ? 'none'
+                        : 'glow 3s ease-in-out infinite',
+                  }}
+                >
+                  <Image
+                    src={SOPHIA_AVATAR}
+                    alt="Sophia"
+                    fill
+                    sizes="40px"
+                    quality={90}
+                    style={{ objectFit: 'contain' }}
+                    onError={() => setAvatarError(true)}
                   />
-                )}
-              </span>
+                </div>
+              ) : (
+                <div
+                  className="flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold text-white"
+                  style={{ backgroundColor: config.colors.primary }}
+                >
+                  S
+                </div>
+              )}
+            </button>
+            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 whitespace-nowrap rounded-md bg-[var(--color-bg-elevated)] px-2 py-1 text-xs text-[var(--color-text-secondary)] opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-none">
+              {isDimmed ? 'Hide Sophia' : 'Chat with Sophia'}
             </div>
           </div>
-        )}
+
+          {/* Speech bubble (right of avatar) */}
+          {currentMessage && (
+            <div
+              className="relative max-w-[200px]"
+              style={
+                isDismissing
+                  ? { animation: 'bubbleFadeOut 0.15s ease-in forwards' }
+                  : { animation: 'fadeIn 0.2s ease-out' }
+              }
+            >
+              {/* Tail pointing left toward avatar */}
+              <div
+                className="absolute -left-1.5 bottom-2.5 h-0 w-0"
+                style={{
+                  borderTop: '5px solid transparent',
+                  borderBottom: '5px solid transparent',
+                  borderRight: `6px solid ${config.colors.primary}`,
+                }}
+              />
+              <div
+                role="region"
+                aria-live="polite"
+                aria-label="Sophia says"
+                onClick={handleBubbleClick}
+                className="relative cursor-pointer rounded-lg px-3 py-2 text-xs leading-relaxed"
+                style={{
+                  backgroundColor: config.colors.bg,
+                  borderLeft: `2px solid ${config.colors.primary}`,
+                }}
+              >
+                {/* Invisible full text reserves height */}
+                <span aria-hidden="true" className="invisible select-none">
+                  {currentMessage}
+                </span>
+                <span
+                  className="absolute inset-0 px-3 py-2 text-xs leading-relaxed"
+                  style={{ color: config.colors.text }}
+                >
+                  {displayed}
+                  {displayed.length < currentMessage.length && (
+                    <span
+                      className="ml-0.5 inline-block h-2.5 w-0.5 animate-pulse"
+                      style={{ backgroundColor: config.colors.primary }}
+                      aria-hidden="true"
+                    />
+                  )}
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
-    </div>
-  );
-}
+    );
+  },
+);
 
 export default FloatingSophia;
