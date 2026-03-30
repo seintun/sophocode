@@ -328,6 +328,7 @@ export function CoachingPanel({
           <input
             ref={inputRef}
             id="coach-input"
+            data-coach-input
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
