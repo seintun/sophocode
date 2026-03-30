@@ -136,10 +136,10 @@ export function SessionLayout({
         />
       </div>
 
-      {/* Floating Sophia avatar — hidden when any coach surface is open */}
+      {/* Floating Sophia avatar — always visible */}
       <FloatingSophia
         currentMessage={currentMessage}
-        isHidden={isCoachSurfaceOpen}
+        isHidden={false}
         mode={mode}
         onClick={handleAvatarClick}
         onDismiss={dismiss}
