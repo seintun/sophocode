@@ -141,7 +141,46 @@ body {
     box-shadow: 0 0 0 0 transparent;
   }
   50% {
-    box-shadow: 0 0 20px -4px color-mix(in srgb, var(--color-accent) 25%, transparent);
+    box-shadow: 0 0 20px -4px
+      var(--sophia-glow-color, color-mix(in srgb, var(--color-accent) 25%, transparent));
+  }
+}
+
+@keyframes sophiaEntrance {
+  from {
+    opacity: 0;
+    transform: scale(0.6) translateY(12px);
+  }
+  60% {
+    transform: scale(1.08) translateY(-2px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes sophiaBounce {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  30% {
+    transform: translateY(-5px);
+  }
+  60% {
+    transform: translateY(-2px);
+  }
+}
+
+@keyframes bubbleFadeOut {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(-4px);
   }
 }
 
