@@ -62,4 +62,33 @@ describe('useKeyboardShortcuts', () => {
     expect(first).not.toHaveBeenCalled();
     expect(second).toHaveBeenCalledTimes(1);
   });
+
+  it('calls onToggleCoach on Cmd+Shift+S', () => {
+    const onToggleCoach = vi.fn();
+    renderHook(() => useKeyboardShortcuts({ onToggleCoach }));
+
+    dispatchKey('s', { metaKey: true, shiftKey: true });
+
+    expect(onToggleCoach).toHaveBeenCalledTimes(1);
+  });
+
+  it('calls onToggleCoach on Ctrl+Shift+S', () => {
+    const onToggleCoach = vi.fn();
+    renderHook(() => useKeyboardShortcuts({ onToggleCoach }));
+
+    dispatchKey('s', { ctrlKey: true, shiftKey: true });
+
+    expect(onToggleCoach).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not call onToggleCoach for S without modifiers', () => {
+    const onToggleCoach = vi.fn();
+    renderHook(() => useKeyboardShortcuts({ onToggleCoach }));
+
+    dispatchKey('s');
+    dispatchKey('S');
+    dispatchKey('s', { shiftKey: true });
+
+    expect(onToggleCoach).not.toHaveBeenCalled();
+  });
 });

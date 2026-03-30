@@ -18,6 +18,7 @@ interface CoachingPanelProps {
   hintLevel: number;
   onAskAboutFailure?: () => void;
   showFailureButton?: boolean;
+  onClose?: () => void;
 }
 
 function extractTextFromMessage(msg: UIMessage): string {
@@ -38,6 +39,7 @@ export function CoachingPanel({
   hintLevel,
   onAskAboutFailure,
   showFailureButton,
+  onClose,
 }: CoachingPanelProps) {
   const [input, setInput] = useState('');
   const [avatarError, setAvatarError] = useState(false);
@@ -113,12 +115,38 @@ export function CoachingPanel({
             </p>
           </div>
         </div>
-        <span
-          className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium"
-          style={{ backgroundColor: config.colors.soft, color: config.colors.primary }}
-        >
-          {config.label}
-        </span>
+        <div className="flex items-center gap-2">
+          <span
+            className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium"
+            style={{ backgroundColor: config.colors.soft, color: config.colors.primary }}
+          >
+            {config.label}
+          </span>
+          {onClose && (
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Hide Sophia coach"
+              className="rounded-md p-1 text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-elevated)]"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Messages */}

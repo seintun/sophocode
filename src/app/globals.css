@@ -213,6 +213,11 @@ body {
   animation: swipeHint 0.6s ease-in-out 2;
 }
 
+/* Session grid — smooth transition when coach panel toggles */
+.session-grid {
+  transition: grid-template-columns 0.3s ease-in-out;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
