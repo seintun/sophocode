@@ -229,12 +229,14 @@ export const MobileWorkspace = forwardRef<MobileWorkspaceHandle, MobileWorkspace
     const handleCloseProblem = useCallback(() => {
       problemSheet.close();
       if (activeTab === 'problem') setActiveTab('code');
-    }, [problemSheet, activeTab]);
+      onSheetOpenChange?.(false);
+    }, [problemSheet, activeTab, onSheetOpenChange]);
 
     const handleCloseTestResults = useCallback(() => {
       testResultsSheet.close();
       if (activeTab === 'run') setActiveTab('code');
-    }, [testResultsSheet, activeTab]);
+      onSheetOpenChange?.(false);
+    }, [testResultsSheet, activeTab, onSheetOpenChange]);
 
     const handleCloseCoach = useCallback(() => {
       coachSheet.close();

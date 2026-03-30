@@ -56,7 +56,6 @@ const REPEATABLE_COOLDOWN_MS = 300_000; // 5 min
 const IDLE_THRESHOLD_MS = 60_000;
 const CODE_EMPTY_DELAY_MS = 30_000;
 const SESSION_START_DELAY_MS = 5_000;
-const AUTO_DISMISS_MS = 7_000;
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -128,11 +127,6 @@ export function useFloatingSophia({
       if (!messages) return;
       const text = messages[resolvedMode] ?? messages.SELF_PRACTICE;
       setCurrentMessage(text);
-
-      // Auto-dismiss after 7s
-      setTimeout(() => {
-        setCurrentMessage(null);
-      }, AUTO_DISMISS_MS);
     },
     [isCoachOpen, resolvedMode],
   );

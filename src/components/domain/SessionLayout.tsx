@@ -42,7 +42,9 @@ export function SessionLayout({
   codeIsEmpty = false,
   onCoachToggle,
 }: SessionLayoutProps) {
+  // Desktop coach panel state — only relevant on md+ screens
   const [isCoachOpen, setIsCoachOpen] = useState(false);
+  // Mobile sheet state — any bottom sheet (problem, coach, test results)
   const [isMobileSheetOpen, setIsMobileSheetOpen] = useState(false);
 
   const handleCoachToggle = useCallback(() => {
@@ -62,6 +64,9 @@ export function SessionLayout({
     setIsMobileSheetOpen(isOpen);
   }, []);
 
+  // Suppress bubbles whenever any coach surface is open (desktop panel or mobile sheet)
+  const isCoachSurfaceOpen = isCoachOpen || isMobileSheetOpen;
+
   const { currentMessage, isDimmed, dismiss, handleClick } = useFloatingSophia({
     mode,
     testResultsData,
@@ -69,21 +74,23 @@ export function SessionLayout({
     elapsedSeconds,
     totalSeconds,
     codeIsEmpty,
-    isCoachOpen,
+    isCoachOpen: isCoachSurfaceOpen,
   });
 
-  // Cmd+Shift+S to toggle coach panel
+  // Cmd+Shift+S toggles coach — on desktop opens panel, on mobile opens coach sheet
   useKeyboardShortcuts({
     onToggleCoach: handleCoachToggle,
   });
 
   const handleAvatarClick = useCallback(() => {
     if (isCoachOpen) {
+      // Desktop: close coach panel
       handleCoachClose();
     } else {
-      handleCoachToggle();
+      // Open coach — dismiss bubble first, then open the appropriate surface
       handleClick();
-      // On mobile, also open the coach sheet
+      handleCoachToggle();
+      // On mobile, also switch to the Coach tab and open its sheet
       workspaceRef?.current?.openCoach();
     }
   }, [isCoachOpen, handleCoachToggle, handleCoachClose, handleClick, workspaceRef]);
@@ -95,6 +102,9 @@ export function SessionLayout({
           onClose: handleCoachClose,
         })
       : coach;
+
+  // Avatar is hidden whenever a coach surface is open
+  const isAvatarHidden = isCoachSurfaceOpen;
 
   return (
     <>
@@ -131,11 +141,11 @@ export function SessionLayout({
         />
       </div>
 
-      {/* Floating Sophia avatar */}
+      {/* Floating Sophia avatar — hidden when any coach surface is open */}
       <FloatingSophia
         currentMessage={currentMessage}
         isDimmed={isDimmed}
-        isCoachOpen={isCoachOpen && !isMobileSheetOpen}
+        isHidden={isAvatarHidden}
         mode={mode}
         onClick={handleAvatarClick}
         onDismiss={dismiss}

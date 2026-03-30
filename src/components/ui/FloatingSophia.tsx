@@ -8,7 +8,7 @@ import type { SessionMode } from '@/lib/sophia';
 interface FloatingSophiaProps {
   currentMessage: string | null;
   isDimmed: boolean;
-  isCoachOpen: boolean;
+  isHidden: boolean;
   mode: SessionMode;
   onClick: () => void;
   onDismiss: () => void;
@@ -20,7 +20,7 @@ const AUTO_DISMISS_MS = 7_000;
 export function FloatingSophia({
   currentMessage,
   isDimmed,
-  isCoachOpen,
+  isHidden,
   mode,
   onClick,
   onDismiss,
@@ -116,7 +116,7 @@ export function FloatingSophia({
   );
 
   // Don't render when coach is fully open (plan: isVisible=false when coach open)
-  if (isCoachOpen) return null;
+  if (isHidden) return null;
 
   return (
     <div
