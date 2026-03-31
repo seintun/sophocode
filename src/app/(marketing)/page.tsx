@@ -36,11 +36,6 @@ export default function LandingPage() {
                 Start practicing free
               </Button>
             </Link>
-            <Link href="/practice">
-              <Button variant="ghost" size="lg" aria-label="See how Sophocode works">
-                See how it works
-              </Button>
-            </Link>
           </div>
           <p className="mt-3 text-sm text-[var(--color-text-muted)]">No sign-up needed.</p>
         </div>

@@ -14,7 +14,16 @@ async function handler(req: NextRequest): Promise<Response> {
     }
 
     const body = await req.json();
-    const { messages, mode, title, statement, pattern, difficulty } = body;
+    const {
+      messages,
+      mode,
+      title,
+      statement,
+      pattern,
+      difficulty,
+      sessionId: _sessionId,
+      currentCode,
+    } = body;
 
     // Validate required fields
     const missingFields: string[] = [];
@@ -36,7 +45,7 @@ async function handler(req: NextRequest): Promise<Response> {
       return new Response('Invalid mode. Must be "coach" or "interviewer".', { status: 400 });
     }
 
-    const promptInput = { title, statement, pattern, difficulty };
+    const promptInput = { title, statement, pattern, difficulty, currentCode };
     const { system } =
       mode === 'coach' ? buildCoachPrompt(promptInput) : buildInterviewerPrompt(promptInput);
 

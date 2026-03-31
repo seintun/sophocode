@@ -16,7 +16,7 @@ import { useAIChat } from '@/hooks/useAIChat';
 import { useCodeExecution } from '@/hooks/useCodeExecution';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { Button } from '@/components/ui/Button';
-import type { SessionMode } from '@/generated/prisma/enums';
+import type { SessionMode, MessageRole } from '@/generated/prisma/enums';
 import type { MobileWorkspaceHandle } from '@/components/domain/MobileWorkspace';
 
 interface TestCase {
@@ -57,6 +57,12 @@ interface SessionData {
   hints: Array<{
     id: string;
     level: number;
+    content: string;
+    createdAt: string;
+  }>;
+  messages: Array<{
+    id: string;
+    role: MessageRole;
     content: string;
     createdAt: string;
   }>;
@@ -142,6 +148,9 @@ export default function SessionPage() {
 function SessionContent({ session, sessionId }: { session: SessionData; sessionId: string }) {
   const router = useRouter();
   const workspaceRef = useRef<MobileWorkspaceHandle | null>(null);
+  const testRunCountRef = useRef(0);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [testRunTick, setTestRunTick] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [code, setCode] = useState(session.code ?? session.problem.starterCode ?? '');
   const [notes, setNotes] = useState('');
@@ -178,6 +187,7 @@ function SessionContent({ session, sessionId }: { session: SessionData; sessionI
     explanationStream,
     getExplanation,
     askAboutFailure,
+    setMessages,
   } = useAIChat({
     mode: session.mode ?? 'SELF_PRACTICE',
     problem: problemContext,
@@ -185,7 +195,53 @@ function SessionContent({ session, sessionId }: { session: SessionData; sessionI
     testResults: testRunResults
       ? { passed: testRunResults.passed, total: testRunResults.total }
       : undefined,
+    sessionId,
   });
+
+  // Sync existing hints and messages from session into chat history on load
+  useEffect(() => {
+    const allMessages: any[] = [];
+
+    // Process Hints
+    if (session.hints && session.hints.length > 0) {
+      const maxLevel = Math.max(0, ...session.hints.map((h) => h.level));
+      setHintLevel(maxLevel);
+
+      allMessages.push(
+        ...session.hints.map((h) => ({
+          id: h.id,
+          role: 'assistant' as const,
+          content: h.content,
+          parts: [{ type: 'text', text: h.content }],
+          annotations: [{ type: 'hint', level: h.level }],
+          createdAt: new Date(h.createdAt),
+        })),
+      );
+    }
+
+    // Process Regular Messages
+    if (session.messages && session.messages.length > 0) {
+      allMessages.push(
+        ...session.messages.map((m) => ({
+          id: m.id,
+          role: m.role.toLowerCase() as any, // 'user' or 'assistant'
+          content: m.content,
+          createdAt: new Date(m.createdAt),
+        })),
+      );
+    }
+
+    if (allMessages.length > 0) {
+      // Sort chronologically
+      allMessages.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+
+      setMessages((prev) => {
+        const existingIds = new Set(prev.map((m) => m.id));
+        const newMessages = allMessages.filter((m) => !existingIds.has(m.id));
+        return [...prev, ...newMessages];
+      });
+    }
+  }, [session.hints, session.messages, setMessages]);
 
   const handleCodeChange = useCallback(
     async (newCode: string) => {
@@ -219,6 +275,8 @@ function SessionContent({ session, sessionId }: { session: SessionData; sessionI
   );
 
   const handleRunTests = useCallback(async () => {
+    testRunCountRef.current++;
+    setTestRunTick((t) => t + 1);
     // Only open the sheet programmatically on mobile to avoid scroll locking on desktop
     if (typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches) {
       workspaceRef.current?.openTestResults();
@@ -350,9 +408,10 @@ function SessionContent({ session, sessionId }: { session: SessionData; sessionI
         mode={session.mode}
         explanationStream={explanationStream}
         getExplanation={getExplanation}
+        sessionId={sessionId}
       />
     ),
-    [session, examples, notes, explanationStream, getExplanation],
+    [session, examples, notes, explanationStream, getExplanation, sessionId],
   );
 
   const editorPanel = useMemo(
@@ -485,6 +544,8 @@ function SessionContent({ session, sessionId }: { session: SessionData; sessionI
             problemTitle={session.problem.title}
             constraints={session.problem.constraints}
             codeIsEmpty={code.trim().length === 0}
+            codeLength={code.length}
+            testRunCount={testRunCountRef.current}
           />
         </ErrorBoundary>
       </div>

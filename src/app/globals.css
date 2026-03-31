@@ -141,7 +141,46 @@ body {
     box-shadow: 0 0 0 0 transparent;
   }
   50% {
-    box-shadow: 0 0 20px -4px color-mix(in srgb, var(--color-accent) 25%, transparent);
+    box-shadow: 0 0 20px -4px
+      var(--sophia-glow-color, color-mix(in srgb, var(--color-accent) 25%, transparent));
+  }
+}
+
+@keyframes sophiaEntrance {
+  from {
+    opacity: 0;
+    transform: scale(0.6) translateY(12px);
+  }
+  60% {
+    transform: scale(1.08) translateY(-2px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes sophiaBounce {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  30% {
+    transform: translateY(-5px);
+  }
+  60% {
+    transform: translateY(-2px);
+  }
+}
+
+@keyframes bubbleFadeOut {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(-4px);
   }
 }
 
@@ -216,6 +255,599 @@ body {
 /* Session grid — smooth transition when coach panel toggles */
 .session-grid {
   transition: grid-template-columns 0.3s ease-in-out;
+}
+
+/* ── Sophia prose markdown renderer ─────────────────────────────────────── */
+
+@layer components {
+  .sophia-prose {
+    font-size: 0.875rem; /* 14px — match chat text-sm */
+    line-height: 1.65;
+    color: inherit;
+    word-break: break-word;
+    /* P99 Latency Optimization: help browser skip expensive layouts for large text blocks */
+    content-visibility: auto;
+    contain-intrinsic-size: 0 500px;
+  }
+
+  /* Paragraphs */
+  .sophia-prose .sophia-p {
+    margin: 0 0 0.6em 0;
+  }
+  .sophia-prose .sophia-p:last-child {
+    margin-bottom: 0;
+  }
+
+  /* Compact paragraph — keeps text inline (for floating bubble) */
+  .sophia-prose .sophia-p-compact {
+    display: inline;
+  }
+  .sophia-prose .sophia-p-compact + .sophia-p-compact::before {
+    content: ' ';
+  }
+
+  /* Inline code — refined to flow like text but look like code */
+  .sophia-prose .sophia-inline-code {
+    font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', ui-monospace, monospace;
+    font-size: 0.825em;
+    background-color: rgba(45, 212, 191, 0.08);
+    color: var(--sophia-accent, #2dd4bf);
+    border: 1px solid rgba(45, 212, 191, 0.15);
+    border-radius: 4px;
+    padding: 0.05em 0.35em;
+    white-space: normal;
+    word-break: break-word;
+    /* Ensure background and border wrap with the text on line breaks */
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
+  }
+
+  /* Fenced code block */
+  .sophia-pre-wrapper {
+    margin: 0.6em 0;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background-color: #0d1117;
+  }
+
+  .sophia-pre-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 12px;
+    background-color: #161b22;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    min-height: 28px;
+  }
+
+  .sophia-lang-label {
+    font-family: ui-monospace, monospace;
+    font-size: 0.7rem;
+    color: #8b949e;
+    text-transform: lowercase;
+    letter-spacing: 0.03em;
+  }
+
+  .sophia-copy-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+    color: #8b949e;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition:
+      color 0.15s,
+      background-color 0.15s;
+    margin-left: auto;
+  }
+  .sophia-copy-btn:hover {
+    color: #e8ecf4;
+    background-color: rgba(255, 255, 255, 0.08);
+  }
+
+  .sophia-pre {
+    margin: 0;
+    padding: 10px 14px;
+    overflow-x: auto;
+    background: transparent;
+  }
+
+  .sophia-pre .sophia-code-inner {
+    font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', ui-monospace, monospace;
+    font-size: 0.8rem;
+    line-height: 1.6;
+    color: #c9d1d9;
+    background: transparent;
+    border: none;
+    padding: 0;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+
+  /* Compact pre — used in floating bubble; minimal styling */
+  .sophia-pre-compact {
+    font-family: ui-monospace, monospace;
+    font-size: 0.75em;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 4px;
+    padding: 2px 6px;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+
+  /* Lists — refined spacing for coaches */
+  .sophia-prose .sophia-ul {
+    list-style-type: disc;
+    padding-left: 1.25em;
+    margin: 0.5rem 0 0.75rem;
+  }
+  .sophia-prose .sophia-ol {
+    list-style-type: decimal;
+    padding-left: 1.25em;
+    margin: 0.5rem 0 0.75rem;
+  }
+  .sophia-prose .sophia-li {
+    margin-bottom: 0.35rem;
+    line-height: 1.6;
+  }
+  .sophia-prose .sophia-li:last-child {
+    margin-bottom: 0;
+  }
+
+  /* Blockquote */
+  .sophia-prose .sophia-blockquote {
+    border-left: 3px solid var(--sophia-accent, #2dd4bf);
+    margin: 0.6em 0;
+    padding: 0.2em 0 0.2em 0.9em;
+    color: var(--color-text-secondary);
+    font-style: italic;
+  }
+
+  /* Strong / em */
+  .sophia-prose .sophia-strong {
+    font-weight: 600;
+    color: var(--color-text-primary);
+  }
+  .sophia-prose .sophia-em {
+    font-style: italic;
+  }
+
+  /* Horizontal rule — gradient fade divider */
+  .sophia-prose .sophia-hr {
+    border: none;
+    height: 1px;
+    margin: 1.2em 0;
+    background: linear-gradient(
+      to right,
+      transparent,
+      var(--sophia-accent, #818cf8) 30%,
+      var(--sophia-accent, #818cf8) 70%,
+      transparent
+    );
+    opacity: 0.25;
+  }
+
+  /* Headings */
+  .sophia-prose .sophia-h1,
+  .sophia-prose .sophia-h2,
+  .sophia-prose .sophia-h3,
+  .sophia-prose .sophia-h4 {
+    font-weight: 600;
+    color: var(--color-text-primary);
+    line-height: 1.3;
+    margin: 1.2em 0 0.5em;
+  }
+  .sophia-prose .sophia-h1 {
+    font-size: 1.15rem;
+  }
+  .sophia-prose .sophia-h2 {
+    font-size: 1.05rem;
+  }
+  .sophia-prose .sophia-h3 {
+    font-size: 0.95rem;
+  }
+  .sophia-prose .sophia-h4 {
+    font-size: 0.875rem;
+  }
+
+  /* ── Explanation tab enhanced layout ─────────────────────────────────────── */
+
+  .sophia-explanation {
+    --sophia-accent: var(--color-ai-coach, #818cf8);
+  }
+
+  /* Increase spacing between sections */
+  .sophia-explanation .sophia-prose {
+    font-size: 0.875rem;
+    line-height: 1.75;
+  }
+
+  .sophia-explanation .sophia-prose .sophia-hr {
+    margin: 1.5em 0;
+    opacity: 0.3;
+  }
+
+  .sophia-explanation .sophia-prose .sophia-p {
+    margin-bottom: 0.75em;
+    color: var(--color-text-primary);
+  }
+
+  .sophia-explanation .sophia-prose .sophia-strong {
+    font-weight: 700;
+    color: #c4b5fd;
+    letter-spacing: 0.01em;
+  }
+
+  /* Ordered lists — numbered approach steps */
+  .sophia-explanation .sophia-prose .sophia-ol {
+    counter-reset: sophia-step;
+    list-style: none;
+    padding-left: 0;
+    margin: 0.75em 0 1.25em;
+  }
+
+  .sophia-explanation .sophia-prose .sophia-ol .sophia-li {
+    counter-increment: sophia-step;
+    position: relative;
+    padding-left: 2.2em;
+    margin-bottom: 0.6em;
+    line-height: 1.6;
+    display: block;
+  }
+
+  .sophia-explanation .sophia-prose .sophia-ol .sophia-li::before {
+    content: counter(sophia-step);
+    position: absolute;
+    left: 0;
+    top: 0.1em;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.5em;
+    height: 1.5em;
+    border-radius: 50%;
+    font-size: 0.7rem;
+    font-weight: 700;
+    background-color: rgba(129, 140, 248, 0.15);
+    color: #a5b4fc;
+    border: 1px solid rgba(129, 140, 248, 0.3);
+  }
+
+  /* Unordered lists in explanation */
+  .sophia-explanation .sophia-prose .sophia-ul {
+    padding-left: 0;
+    list-style: none;
+    margin: 0.5em 0 0.75em;
+  }
+
+  .sophia-explanation .sophia-prose .sophia-ul .sophia-li {
+    position: relative;
+    padding-left: 1.3em;
+    margin-bottom: 0.5em;
+    display: block;
+    line-height: 1.6;
+  }
+
+  .sophia-explanation .sophia-prose .sophia-ul .sophia-li::before {
+    content: '▸';
+    position: absolute;
+    left: 0;
+    top: 0.05em;
+    color: #818cf8;
+    font-size: 0.75em;
+  }
+
+  /* Inline code in explanation */
+  .sophia-explanation .sophia-prose .sophia-inline-code {
+    background-color: rgba(129, 140, 248, 0.12);
+    color: #a5b4fc;
+    border-color: rgba(129, 140, 248, 0.25);
+  }
+
+  /* ── Explanation CTA card ─────────────────────────────────────────────────── */
+
+  .explanation-cta {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 0.75rem;
+    padding: 2.25rem 1.5rem;
+    border-radius: 12px;
+    border: 1px dashed rgba(129, 140, 248, 0.25);
+    background: radial-gradient(ellipse at top, rgba(129, 140, 248, 0.06) 0%, transparent 70%);
+    margin-top: 0.5rem;
+  }
+
+  .explanation-cta-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background-color: rgba(129, 140, 248, 0.12);
+    color: #818cf8;
+    border: 1px solid rgba(129, 140, 248, 0.2);
+  }
+
+  .explanation-cta-title {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--color-text-primary);
+    margin: 0;
+  }
+
+  .explanation-cta-desc {
+    font-size: 0.8125rem;
+    color: var(--color-text-secondary);
+    line-height: 1.6;
+    max-width: 320px;
+    margin: 0;
+  }
+
+  .explanation-cta-hint {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.7rem;
+    color: var(--color-text-muted);
+    background: rgba(129, 140, 248, 0.07);
+    border: 1px solid rgba(129, 140, 248, 0.15);
+    border-radius: 100px;
+    padding: 0.25em 0.75em;
+  }
+
+  .explanation-cta-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.6rem 1.5rem;
+    border-radius: 8px;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: #fff;
+    background: linear-gradient(135deg, #818cf8 0%, #6366f1 100%);
+    border: none;
+    cursor: pointer;
+    transition:
+      opacity 0.15s,
+      transform 0.1s;
+    box-shadow: 0 4px 14px rgba(99, 102, 241, 0.4);
+  }
+  .explanation-cta-btn:hover:not(:disabled) {
+    opacity: 0.9;
+    transform: translateY(-1px);
+  }
+  .explanation-cta-btn:active:not(:disabled) {
+    transform: scale(0.97);
+  }
+  .explanation-cta-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  /* ── Hint CTA card (Coaching variant) ─────────────────────────────────────── */
+
+  .hint-cta {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 0.85rem;
+    padding: 2.25rem 1.5rem;
+    border-radius: 12px;
+    border: 1px dashed rgba(45, 212, 191, 0.25);
+    background: radial-gradient(ellipse at top, rgba(45, 212, 191, 0.06) 0%, transparent 70%);
+    margin: 1rem 0;
+  }
+
+  .hint-cta-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background-color: rgba(45, 212, 191, 0.12);
+    color: #2dd4bf;
+    border: 1px solid rgba(45, 212, 191, 0.2);
+  }
+
+  .hint-cta-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.6rem 1.5rem;
+    border-radius: 8px;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: #fff;
+    background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%);
+    border: none;
+    cursor: pointer;
+    transition:
+      opacity 0.15s,
+      transform 0.1s;
+    box-shadow: 0 4px 14px rgba(20, 184, 166, 0.35);
+  }
+  .hint-cta-btn:hover:not(:disabled) {
+    opacity: 0.95;
+    transform: translateY(-1px);
+  }
+  .hint-cta-btn:active:not(:disabled) {
+    transform: scale(0.97);
+  }
+  .hint-cta-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+
+  /* ── Error / Failure CTA ──────────────────────────────────────────────────── */
+
+  .error-cta-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.6rem 1.25rem;
+    border-radius: 8px;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: #fff;
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    border: none;
+    cursor: pointer;
+    transition:
+      opacity 0.15s,
+      transform 0.1s;
+    box-shadow: 0 4px 12px rgba(220, 38, 38, 0.35);
+  }
+  .error-cta-btn:hover:not(:disabled) {
+    opacity: 0.9;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(220, 38, 38, 0.45);
+  }
+  .error-cta-btn:active:not(:disabled) {
+    transform: scale(0.97);
+  }
+  .error-cta-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+
+  /* ── Hint Badge ───────────────────────────────────────────────────────────── */
+
+  .sophia-hint-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.15rem 0.65rem;
+    border-radius: 100px;
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    background-color: rgba(45, 212, 191, 0.12);
+    color: #2dd4bf;
+    border: 1px solid rgba(45, 212, 191, 0.25);
+    margin-bottom: 0.5rem;
+  }
+
+  .sophia-bubble-assistant {
+    border: 1px solid rgba(255, 255, 255, 0.04);
+    box-shadow: 0 2px 8px -2px rgba(0, 0, 0, 0.3);
+  }
+
+  /* ── Explanation loading state ────────────────────────────────────────────── */
+
+  .explanation-loader {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.25rem;
+    padding: 2rem 0;
+  }
+
+  .explanation-loader-avatar {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+  }
+
+  .explanation-loader-ring {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    border: 2px solid rgba(129, 140, 248, 0.25);
+    border-top-color: #818cf8;
+    animation: spin 0.8s linear infinite;
+  }
+
+  .explanation-loader-icon {
+    color: #818cf8;
+    opacity: 0.9;
+  }
+
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  .explanation-loader-msg {
+    font-size: 0.8125rem;
+    color: var(--color-text-secondary);
+    animation: fadeIn 0.4s ease-out;
+    margin: 0;
+    min-height: 1.2em;
+  }
+
+  .explanation-loader-skeleton {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+  }
+
+  .explanation-loader-gap {
+    height: 0.75rem;
+  }
+
+  .explanation-loader-line {
+    height: 10px;
+    border-radius: 6px;
+    background: linear-gradient(
+      90deg,
+      rgba(129, 140, 248, 0.08) 25%,
+      rgba(129, 140, 248, 0.18) 50%,
+      rgba(129, 140, 248, 0.08) 75%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.8s ease-in-out infinite;
+  }
+
+  @keyframes shimmer {
+    0% {
+      background-position: 200% 0;
+    }
+    100% {
+      background-position: -200% 0;
+    }
+  }
+
+  /* Streaming cursor */
+  .sophia-cursor {
+    display: inline-block;
+    width: 2px;
+    height: 0.85em;
+    margin-left: 1px;
+    vertical-align: text-bottom;
+    border-radius: 1px;
+    background-color: var(--sophia-accent, #2dd4bf);
+    animation: sophiaCursorBlink 0.9s ease-in-out infinite;
+  }
+
+  @keyframes sophiaCursorBlink {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0;
+    }
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

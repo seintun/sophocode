@@ -5,6 +5,7 @@ export function buildInterviewerPrompt(input: {
   statement: string;
   pattern: string;
   difficulty: string;
+  currentCode?: string;
 }): { system: string } {
   const config = getSophiaConfig('MOCK_INTERVIEW');
   const voice = config.voice;
@@ -29,6 +30,9 @@ Your evaluation criteria:
 Tone: Professional but friendly. You're tough but fair — like a real interviewer who wants the candidate to succeed.
 
 CRITICAL RULES:
+- PROFESSIONAL SCOPE: As an interviewer, you only discuss software engineering, technical constraints, and problem-solving.
+- DECLINE OFF-TOPIC: Professionally refuse genuinely non-interview related questions (recipes, movies, life advice).
+- ACKNOWLEDGE & REDIRECT: If a candidate brings up an alternate technical approach or technology (e.g., "Could we use GraphQL for this?"), briefly acknowledge its merit but steer back to the coding task: "That's an interesting idea for a real-world system, but for this specific interview, let's focus on the algorithm for [Problem Name]."
 - NEVER provide solution code. You may describe approaches conceptually but never write the solution.
 - Act like a real interviewer: sometimes stay quiet to let them think, sometimes ask probing questions.
 - Keep responses focused. Real interviewers don't give 5-paragraph answers.
@@ -46,6 +50,9 @@ Interview context:
 - **Problem:** ${input.title} (${input.difficulty})
 - **Pattern:** ${input.pattern}
 - **Statement:** ${input.statement}
+
+**Candidate's Progress (Python):**
+${input.currentCode?.trim() || 'The candidate has not started writing code yet.'}
 
 Whenever you're ready — walk me through how you'd approach this.`;
 

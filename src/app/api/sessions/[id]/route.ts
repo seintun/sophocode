@@ -44,6 +44,9 @@ async function getHandler(
         hints: {
           orderBy: { createdAt: 'asc' },
         },
+        messages: {
+          orderBy: { createdAt: 'asc' },
+        },
       },
     });
 

@@ -1,6 +1,14 @@
 'use client';
 
-import { useState, useCallback, cloneElement, isValidElement, type ReactNode } from 'react';
+import {
+  useState,
+  useCallback,
+  useRef,
+  cloneElement,
+  isValidElement,
+  type ReactNode,
+  useEffect,
+} from 'react';
 import { MobileWorkspace, type MobileWorkspaceHandle } from './MobileWorkspace';
 import { FloatingSophia } from '@/components/ui/FloatingSophia';
 import { useFloatingSophia } from '@/hooks/useFloatingSophia';
@@ -23,6 +31,8 @@ interface SessionLayoutProps {
   totalSeconds?: number;
   codeIsEmpty?: boolean;
   onCoachToggle?: (isOpen: boolean) => void;
+  codeLength?: number;
+  testRunCount?: number;
 }
 
 export function SessionLayout({
@@ -41,16 +51,26 @@ export function SessionLayout({
   totalSeconds = 0,
   codeIsEmpty = false,
   onCoachToggle,
+  codeLength,
+  testRunCount,
 }: SessionLayoutProps) {
   // Desktop coach panel state — only relevant on md+ screens
   const [isCoachOpen, setIsCoachOpen] = useState(false);
   // Mobile sheet state — any bottom sheet (problem, coach, test results)
   const [isMobileSheetOpen, setIsMobileSheetOpen] = useState(false);
+  const avatarButtonRef = useRef<HTMLButtonElement>(null);
+  const [activeTab, setActiveTab] = useState<'problem' | 'code' | 'coach' | 'run'>('code');
 
   const handleCoachToggle = useCallback(() => {
     setIsCoachOpen((prev) => {
       const next = !prev;
       onCoachToggle?.(next);
+      if (next) {
+        setTimeout(
+          () => (document.querySelector('[data-coach-input]') as HTMLElement | null)?.focus(),
+          100,
+        );
+      }
       return next;
     });
   }, [onCoachToggle]);
@@ -60,8 +80,21 @@ export function SessionLayout({
     onCoachToggle?.(false);
   }, [onCoachToggle]);
 
+  // Restore focus to avatar button when coach closes (accessibility)
+  const prevIsCoachOpen = useRef(isCoachOpen);
+  useEffect(() => {
+    if (prevIsCoachOpen.current && !isCoachOpen) {
+      avatarButtonRef.current?.focus();
+    }
+    prevIsCoachOpen.current = isCoachOpen;
+  }, [isCoachOpen]);
+
   const handleMobileSheetChange = useCallback((isOpen: boolean) => {
     setIsMobileSheetOpen(isOpen);
+  }, []);
+
+  const handleActiveTabChange = useCallback((tab: 'problem' | 'code' | 'coach' | 'run') => {
+    setActiveTab(tab);
   }, []);
 
   // Suppress bubbles whenever any coach surface is open (desktop panel or mobile sheet)
@@ -75,6 +108,9 @@ export function SessionLayout({
     totalSeconds,
     codeIsEmpty,
     isCoachOpen: isCoachSurfaceOpen,
+    codeLength,
+    testRunCount,
+    activeTab,
   });
 
   // Cmd+Shift+S toggles coach — on desktop opens panel, on mobile opens coach sheet
@@ -109,14 +145,20 @@ export function SessionLayout({
           isCoachOpen ? 'md:grid-cols-[30%_40%_30%]' : 'md:grid-cols-[30%_70%]'
         }`}
       >
-        <div className="flex h-full flex-col border-r border-[var(--color-border)]">{problem}</div>
+        <div className="flex h-full flex-col min-h-0 overflow-hidden border-r border-[var(--color-border)]">
+          {problem}
+        </div>
         <div className="flex h-full flex-col overflow-hidden border-r border-[var(--color-border)]">
           <div className="min-h-0 flex-1">{editor}</div>
           <div className="h-[35%] flex flex-col border-t border-[var(--color-border)]">
             {testResults}
           </div>
         </div>
-        {isCoachOpen && <div className="flex h-full flex-col relative">{coachWithClose}</div>}
+        {isCoachOpen && (
+          <div className="relative flex h-full flex-col min-h-0 overflow-hidden">
+            {coachWithClose}
+          </div>
+        )}
       </div>
 
       {/* Mobile: bottom sheet architecture */}
@@ -133,13 +175,16 @@ export function SessionLayout({
           onRunTests={onRunTests}
           isRunning={isRunning}
           onSheetOpenChange={handleMobileSheetChange}
+          onActiveTabChange={handleActiveTabChange}
         />
       </div>
 
       {/* Floating Sophia avatar — always visible */}
       <FloatingSophia
+        ref={avatarButtonRef}
         currentMessage={currentMessage}
         isHidden={false}
+        isDimmed={isCoachSurfaceOpen}
         mode={mode}
         onClick={handleAvatarClick}
         onDismiss={dismiss}

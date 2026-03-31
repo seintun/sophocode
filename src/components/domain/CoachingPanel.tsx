@@ -1,9 +1,12 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
+
+const HINT_COOLDOWN_MS = 3 * 60 * 1000; // 3 minutes
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/Button';
+import { StreamedMarkdownMessage } from '@/components/ui/StreamedMarkdownMessage';
+import { HintLoader } from '@/components/ui/HintLoader';
 import { getSophiaConfig, SOPHIA_AVATAR } from '@/lib/sophia';
 import type { SessionMode } from '@/generated/prisma/enums';
 import type { UIMessage } from 'ai';
@@ -22,6 +25,9 @@ interface CoachingPanelProps {
 }
 
 function extractTextFromMessage(msg: UIMessage): string {
+  // Try direct content first (standard for simple user messages)
+  if ((msg as any).content) return (msg as any).content;
+  // Fallback to parts (standard for complex or streaming messages)
   if (!msg.parts) return '';
   return msg.parts
     .filter((p) => p.type === 'text')
@@ -43,8 +49,10 @@ export function CoachingPanel({
 }: CoachingPanelProps) {
   const [input, setInput] = useState('');
   const [avatarError, setAvatarError] = useState(false);
+  const [cooldownRemaining, setCooldownRemaining] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const cooldownEndRef = useRef<number>(0);
 
   const config = getSophiaConfig(mode);
   const canChat = mode === 'COACH_ME' || mode === 'MOCK_INTERVIEW';
@@ -70,6 +78,23 @@ export function CoachingPanel({
 
   const nextHintLevel = Math.min(hintLevel + 1, 3);
   const canGetHint = hintLevel < 3 && mode !== 'MOCK_INTERVIEW';
+  const isHintOnCooldown = cooldownRemaining > 0;
+
+  useEffect(() => {
+    if (cooldownRemaining <= 0) return;
+    const id = setInterval(() => {
+      const remaining = Math.max(0, Math.ceil((cooldownEndRef.current - Date.now()) / 1000));
+      setCooldownRemaining(remaining);
+      if (remaining <= 0) clearInterval(id);
+    }, 1000);
+    return () => clearInterval(id);
+  }, [cooldownRemaining]);
+
+  const handleHintRequest = useCallback(() => {
+    onHintRequest(nextHintLevel);
+    cooldownEndRef.current = Date.now() + HINT_COOLDOWN_MS;
+    setCooldownRemaining(Math.ceil(HINT_COOLDOWN_MS / 1000));
+  }, [onHintRequest, nextHintLevel]);
 
   const statusText = hintStream.isLoading
     ? config.vocabulary.generatingHint
@@ -150,37 +175,103 @@ export function CoachingPanel({
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4" aria-live="polite" aria-atomic="false">
-        {messages.length === 0 && !hintStream.text ? (
-          <div className="flex h-full flex-col items-center justify-center gap-4 text-center">
-            <p className="text-sm text-[var(--color-text-muted)]">{config.emptyStateText}</p>
-            {canGetHint && (
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => onHintRequest(nextHintLevel)}
-                disabled={!canGetHint || hintStream.isLoading}
-                aria-label={`Ask Sophia for a hint level ${nextHintLevel}`}
-              >
-                {hintStream.isLoading
-                  ? 'Getting hint...'
-                  : `Ask Sophia for a hint (Level ${nextHintLevel})`}
-              </Button>
+      <div className="flex-1 min-h-0 overflow-y-auto p-4" aria-live="polite" aria-atomic="false">
+        {messages.length === 0 && !hintStream.text && !hintStream.isLoading ? (
+          <div className="flex h-full flex-col items-center justify-start py-8">
+            <div className="hint-cta">
+              <div className="hint-cta-icon" aria-hidden="true">
+                <svg
+                  width="28"
+                  height="28"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M12 2a10 10 0 1 0 10 10" />
+                  <path d="M12 6v6l4 2" />
+                </svg>
+              </div>
+
+              <h3 className="explanation-cta-title">Need a nudge?</h3>
+              <p className="explanation-cta-desc">
+                Sophia can analyze your code and provide a progressive hint to help you get unstuck
+                without giving away the full solution.
+              </p>
+
+              <div className="explanation-cta-hint">
+                <svg
+                  width="12"
+                  height="12"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+                </svg>
+                Uses AI · Progressive Levels · Typically 5-10s
+              </div>
+
+              {canGetHint && (
+                <button
+                  type="button"
+                  onClick={handleHintRequest}
+                  disabled={hintStream.isLoading || isLoading || isHintOnCooldown}
+                  aria-label={`Ask Sophia for a hint level ${nextHintLevel}`}
+                  className="hint-cta-btn mt-2"
+                >
+                  <svg
+                    width="15"
+                    height="15"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+                  </svg>
+                  {isHintOnCooldown
+                    ? `Next hint in ${Math.floor(cooldownRemaining / 60)}:${String(cooldownRemaining % 60).padStart(2, '0')}`
+                    : `Get Hint (Level ${nextHintLevel})`}
+                </button>
+              )}
+            </div>
+            {!canGetHint && (
+              <p className="mt-4 text-xs text-[var(--color-text-muted)] italic">
+                {mode === 'MOCK_INTERVIEW'
+                  ? 'Hints are disabled in Mock Interview mode.'
+                  : 'All hints for this problem have been unlocked.'}
+              </p>
             )}
           </div>
         ) : (
           <div className="space-y-3">
             {/* Chat messages */}
-            {messages.map((msg) => {
+            {messages.map((msg, index) => {
               const text = extractTextFromMessage(msg);
-              if (!text) return null;
               const isAssistant = msg.role === 'assistant';
+              const isStreamingActive = isAssistant && isLoading && index === messages.length - 1;
+
+              // Don't skip assistant messages even if they're empty (it means they're reasoning/starting)
+              if (!text && !isAssistant) return null;
 
               return (
                 <div
                   key={msg.id}
-                  style={{ animation: 'slideUp 0.2s ease-out' }}
-                  className={cn('flex gap-2', isAssistant ? 'justify-start' : 'justify-end')}
+                  style={{ animation: 'slideUp 0.15s ease-out' }}
+                  className={cn(
+                    'flex gap-3',
+                    isAssistant ? 'justify-start pl-1' : 'justify-end pr-1',
+                  )}
                 >
                   {isAssistant && (
                     <div className="shrink-0">
@@ -207,7 +298,10 @@ export function CoachingPanel({
                     </div>
                   )}
                   <div
-                    className="max-w-[80%] rounded-lg px-3 py-2 text-sm"
+                    className={cn(
+                      'max-w-[85%] rounded-lg px-3 py-2 text-sm',
+                      isAssistant && 'sophia-bubble-assistant',
+                    )}
                     style={
                       isAssistant
                         ? { backgroundColor: config.colors.bg, color: 'var(--color-text-primary)' }
@@ -224,15 +318,45 @@ export function CoachingPanel({
                     >
                       {isAssistant ? 'Sophia' : 'You'}
                     </div>
-                    <div className="whitespace-pre-wrap">{text}</div>
+                    {isAssistant ? (
+                      <>
+                        {(msg as any).annotations?.some((a: any) => a.type === 'hint') && (
+                          <div className="sophia-hint-badge">
+                            <svg
+                              width="10"
+                              height="10"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="3"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              aria-hidden="true"
+                            >
+                              <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+                            </svg>
+                            Hint (Level{' '}
+                            {(msg as any).annotations.find((a: any) => a.type === 'hint').level})
+                          </div>
+                        )}
+                        <StreamedMarkdownMessage
+                          content={text || (isStreamingActive ? '...' : '')}
+                          accentColor={config.colors.primary}
+                          isStreaming={isStreamingActive}
+                          cursorColor={config.colors.primary}
+                        />
+                      </>
+                    ) : (
+                      <div className="whitespace-pre-wrap">{text}</div>
+                    )}
                   </div>
                 </div>
               );
             })}
 
-            {/* Hint stream */}
-            {hintStream.text && (
-              <div className="flex gap-2">
+            {/* Active Hint stream - show ONLY during generation */}
+            {hintStream.isLoading && (
+              <div className="flex gap-3 pl-1">
                 {!avatarError ? (
                   <div className="relative h-7 w-7 shrink-0 overflow-hidden rounded-full">
                     <Image
@@ -254,21 +378,37 @@ export function CoachingPanel({
                   </div>
                 )}
                 <div
-                  className="rounded-lg px-3 py-2 text-sm text-[var(--color-text-primary)]"
+                  className={cn(
+                    'rounded-lg px-3 py-2 text-sm text-[var(--color-text-primary)] sophia-bubble-assistant',
+                  )}
                   style={{ backgroundColor: config.colors.bg }}
                 >
-                  <div className="mb-1 text-xs font-medium" style={{ color: config.colors.text }}>
+                  <div className="sophia-hint-badge">
+                    <svg
+                      width="10"
+                      height="10"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="3"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden="true"
+                    >
+                      <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+                    </svg>
                     Hint (Level {hintLevel})
                   </div>
-                  <div className="whitespace-pre-wrap">
-                    {hintStream.text}
-                    {hintStream.isLoading && (
-                      <span
-                        className="ml-1 inline-block h-3 w-3 animate-pulse rounded-full"
-                        style={{ backgroundColor: config.colors.primary }}
-                      />
-                    )}
-                  </div>
+                  {hintStream.text ? (
+                    <StreamedMarkdownMessage
+                      content={hintStream.text}
+                      accentColor={config.colors.primary}
+                      isStreaming={hintStream.isLoading}
+                      cursorColor={config.colors.primary}
+                    />
+                  ) : (
+                    <HintLoader level={hintLevel} />
+                  )}
                 </div>
               </div>
             )}
@@ -284,30 +424,58 @@ export function CoachingPanel({
               </div>
             )}
 
-            {/* Action buttons */}
-            <div className="flex flex-wrap justify-center gap-2">
-              {canGetHint && (
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => onHintRequest(nextHintLevel)}
-                  disabled={hintStream.isLoading || isLoading}
+            <div className="flex flex-wrap justify-center gap-2 pt-2">
+              {canGetHint && !hintStream.isLoading && (
+                <button
+                  type="button"
+                  onClick={handleHintRequest}
+                  disabled={hintStream.isLoading || isLoading || isHintOnCooldown}
                   aria-label={`Ask Sophia for a hint level ${nextHintLevel}`}
+                  className="hint-cta-btn"
                 >
-                  Ask Sophia for a hint (Level {nextHintLevel})
-                </Button>
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+                  </svg>
+                  {isHintOnCooldown
+                    ? `Next hint in ${Math.floor(cooldownRemaining / 60)}:${String(cooldownRemaining % 60).padStart(2, '0')}`
+                    : `Request Level ${nextHintLevel} Hint`}
+                </button>
               )}
               {showFailureButton && onAskAboutFailure && (
-                <Button
-                  variant="secondary"
-                  size="sm"
+                <button
+                  type="button"
                   onClick={onAskAboutFailure}
                   disabled={isLoading}
                   aria-label="Ask Sophia why tests failed"
-                  className="border-[var(--color-error)]/30 text-[var(--color-error)] hover:bg-[var(--color-error)]/10"
+                  className="error-cta-btn"
                 >
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="12" y1="8" x2="12" y2="12" />
+                    <line x1="12" y1="16" x2="12.01" y2="16" />
+                  </svg>
                   Why did this fail?
-                </Button>
+                </button>
               )}
             </div>
 
@@ -328,6 +496,7 @@ export function CoachingPanel({
           <input
             ref={inputRef}
             id="coach-input"
+            data-coach-input
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}

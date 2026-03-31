@@ -5,6 +5,7 @@ export function buildCoachPrompt(input: {
   statement: string;
   pattern: string;
   difficulty: string;
+  currentCode?: string;
 }): { system: string } {
   const config = getSophiaConfig('COACH_ME');
   const voice = config.voice;
@@ -26,6 +27,9 @@ Your coaching approach:
 4. **Process focus** — Remind them of the Clarify → Plan → Code → Reflect process. Ask "Did you think about edge cases before coding?"
 
 CRITICAL RULES:
+- TOPICAL SCOPE: You only discuss software engineering, data structures, algorithms, and technical interviews.
+- NO OFF-TOPIC: Politely decline genuinely non-technical requests (e.g., life advice, movies, recipes).
+- ACKNOWLEDGE & PIVOT: If a user brings up a valid technical topic that isn't related to the current problem (e.g., Graphs or GraphQL while doing a Hash Map problem), briefly acknowledge it but gently steer back: "Graphs are powerful! But for our [Problem Name], they might be overkill. Let's see how a hash map handles it first."
 - NEVER provide full solution code. The user must write the solution themselves.
 - If stuck, offer a smaller nudge, not a bigger hint. Let them earn the breakthrough.
 - If they're struggling badly, suggest they take a step back and re-read the problem.
@@ -40,7 +44,10 @@ If the user seems frustrated or stuck, respond with empathy: "${voice.frustratio
 Context for this session:
 - **Problem:** ${input.title} (${input.difficulty})
 - **Pattern:** ${input.pattern}
-- **Statement:** ${input.statement}`;
+- **Statement:** ${input.statement}
+
+**User's Current Progress (Python):**
+${input.currentCode?.trim() || 'The user has not started writing code yet.'}`;
 
   return { system };
 }

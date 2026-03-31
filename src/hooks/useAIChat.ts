@@ -22,6 +22,7 @@ interface UseAIChatOptions {
   problem: ProblemContext;
   currentCode?: string;
   testResults?: { passed: number; total: number };
+  sessionId?: string;
 }
 
 async function* readSseStream(response: Response) {
@@ -80,7 +81,13 @@ function extractTextFromSse(
   });
 }
 
-export function useAIChat({ mode, problem, currentCode, testResults }: UseAIChatOptions) {
+export function useAIChat({
+  mode,
+  problem,
+  currentCode,
+  testResults,
+  sessionId,
+}: UseAIChatOptions) {
   const chatMode = mode === 'MOCK_INTERVIEW' ? 'interviewer' : 'coach';
 
   const { messages, sendMessage, status, stop, setMessages } = useChat({
@@ -88,6 +95,8 @@ export function useAIChat({ mode, problem, currentCode, testResults }: UseAIChat
       api: '/api/ai/chat',
       body: {
         mode: chatMode,
+        sessionId,
+        currentCode,
         ...problem,
       },
     }),
@@ -158,6 +167,19 @@ export function useAIChat({ mode, problem, currentCode, testResults }: UseAIChat
         );
 
         setHintStream({ text: fullText, isLoading: false });
+
+        // Append the completed hint to the persistent message history
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `hint-${level}-${Date.now()}`,
+            role: 'assistant',
+            content: fullText,
+            parts: [{ type: 'text', text: fullText }],
+            annotations: [{ type: 'hint', level }],
+          } as any, // Cast to any to bypass strict SDK part vs content typing conflicts
+        ]);
+
         return fullText;
       } catch (err) {
         console.error('[useAIChat] getHint exception:', err);
@@ -166,7 +188,7 @@ export function useAIChat({ mode, problem, currentCode, testResults }: UseAIChat
         return '';
       }
     },
-    [problem, currentCode, testResults, mode],
+    [problem, currentCode, testResults, mode, setMessages],
   );
 
   const getExplanation = useCallback(async () => {
