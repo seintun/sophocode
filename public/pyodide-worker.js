@@ -111,7 +111,7 @@ function runTestCase(py, code, input, funcName) {
   // 3. The first newline in 'execution'
   // 4. The user code line
   // Fixed offset for this structure is 14.
-  const codeLineOffset = 14;
+  const codeLineOffset = 13;
 
   const execution = `
 ${indentedCode}
