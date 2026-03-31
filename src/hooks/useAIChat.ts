@@ -81,7 +81,13 @@ function extractTextFromSse(
   });
 }
 
-export function useAIChat({ mode, problem, currentCode, testResults, sessionId }: UseAIChatOptions) {
+export function useAIChat({
+  mode,
+  problem,
+  currentCode,
+  testResults,
+  sessionId,
+}: UseAIChatOptions) {
   const chatMode = mode === 'MOCK_INTERVIEW' ? 'interviewer' : 'coach';
 
   const { messages, sendMessage, status, stop, setMessages } = useChat({
@@ -182,7 +188,7 @@ export function useAIChat({ mode, problem, currentCode, testResults, sessionId }
         return '';
       }
     },
-    [problem, currentCode, testResults, mode],
+    [problem, currentCode, testResults, mode, setMessages],
   );
 
   const getExplanation = useCallback(async () => {
