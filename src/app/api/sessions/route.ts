@@ -1,7 +1,7 @@
-import { type NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/db/prisma';
 import type { SessionMode } from '@/generated/prisma/enums';
-import { withAuth, validateId } from '@/lib/errors/api';
+import { prisma } from '@/lib/db/prisma';
+import { validateId, withAuth } from '@/lib/errors/api';
+import { type NextRequest, NextResponse } from 'next/server';
 
 async function handler(request: NextRequest, { guestId }: { guestId: string }): Promise<Response> {
   try {
@@ -28,14 +28,11 @@ async function handler(request: NextRequest, { guestId }: { guestId: string }): 
         guestId,
         problemId,
         status: 'IN_PROGRESS',
-        OR: [
-          { expiresAt: null },
-          { expiresAt: { gt: new Date() } }
-        ],
+        OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
       },
-      select: { 
-        id: true, 
-        mode: true 
+      select: {
+        id: true,
+        mode: true,
       },
     });
 
@@ -50,7 +47,7 @@ async function handler(request: NextRequest, { guestId }: { guestId: string }): 
       );
     }
 
-    const duration = 45;
+    const duration = 45; // 45 minutes
     const expiresAt = new Date(Date.now() + duration * 60 * 1000);
 
     const session = await prisma.session.create({
@@ -71,7 +68,10 @@ async function handler(request: NextRequest, { guestId }: { guestId: string }): 
   }
 }
 
-async function getHandler(request: NextRequest, { guestId }: { guestId: string }): Promise<Response> {
+async function getHandler(
+  request: NextRequest,
+  { guestId }: { guestId: string },
+): Promise<Response> {
   try {
     const { searchParams } = new URL(request.url);
     const problemId = searchParams.get('problemId');
@@ -85,10 +85,7 @@ async function getHandler(request: NextRequest, { guestId }: { guestId: string }
         guestId,
         problemId,
         status: 'IN_PROGRESS',
-        OR: [
-          { expiresAt: null },
-          { expiresAt: { gt: new Date() } }
-        ],
+        OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
       },
       select: {
         id: true,

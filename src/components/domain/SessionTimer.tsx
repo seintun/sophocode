@@ -38,6 +38,7 @@ export function SessionTimer({ startTime, expiresAt, onExtend, className }: Sess
   const seconds = displayTime % 60;
 
   const isLowTime = remaining !== null && remaining < 300; // < 5 minutes
+  const isWarningTime = remaining !== null && remaining < 900; // < 15 minutes
   const isExpired = remaining !== null && remaining === 0;
 
   const pad = (n: number) => n.toString().padStart(2, '0');
@@ -46,13 +47,21 @@ export function SessionTimer({ startTime, expiresAt, onExtend, className }: Sess
     <div className={cn('flex items-center gap-2', isLowTime && 'animate-pulse-subtle')}>
       <div
         className={cn(
-          'flex items-center gap-1.5 font-mono text-[11px] md:text-xs font-medium tracking-tight border px-2 py-1 rounded-full shadow-sm transition-all duration-500',
+          'flex items-center gap-1.5 font-mono text-[11px] md:text-xs font-bold tracking-tight border px-2.5 py-1 rounded-full shadow-lg transition-all duration-500',
           isLowTime
-            ? 'animate-glow bg-[var(--color-error)]/10 border-[var(--color-error)]/40 text-[var(--color-error)]'
-            : 'bg-[var(--color-bg-elevated)] border-[var(--color-border)]',
+            ? 'animate-glow bg-[var(--color-error)]/10 border-[var(--color-error)]/50 text-[var(--color-error)] ring-1 ring-[var(--color-error)]/20'
+            : isWarningTime
+              ? 'animate-glow bg-[var(--color-warning)]/10 border-[var(--color-warning)]/40 text-[var(--color-warning)]'
+              : 'bg-[var(--color-bg-elevated)] border-[var(--color-border)]',
           className,
         )}
-        style={isLowTime ? ({ '--sophia-glow-color': 'rgba(239, 68, 68, 0.4)' } as React.CSSProperties) : {}}
+        style={
+          isLowTime
+            ? ({ '--sophia-glow-color': 'rgba(239, 68, 68, 0.6)' } as React.CSSProperties)
+            : isWarningTime
+              ? ({ '--sophia-glow-color': 'rgba(245, 158, 11, 0.4)' } as React.CSSProperties)
+              : {}
+        }
         title={remaining !== null ? 'Session Time Remaining' : 'Session Duration'}
       >
         <svg
@@ -64,7 +73,13 @@ export function SessionTimer({ startTime, expiresAt, onExtend, className }: Sess
           strokeWidth="2.5"
           strokeLinecap="round"
           strokeLinejoin="round"
-          className={cn(isLowTime ? 'text-[var(--color-error)]' : 'text-[var(--color-text-muted)]')}
+          className={cn(
+            isLowTime
+              ? 'text-[var(--color-error)]'
+              : isWarningTime
+                ? 'text-[var(--color-warning)]'
+                : 'text-[var(--color-text-muted)]',
+          )}
         >
           <circle cx="12" cy="12" r="10" />
           <polyline points="12 6 12 12 16 14" />
