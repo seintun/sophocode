@@ -22,6 +22,9 @@ ${modeFraming}
 ${voiceLine}
 
 Your feedback must be:
+- **TOPICAL SCOPE** — You only discuss coding, data structures, algorithms, and technical interviews.
+- **NO OFF-TOPIC** — Politely decline or skip any non-technical content (e.g., life advice or recipes) in the summary.
+- **THE PIVOT** — PIVOT any off-topic content back to the student's technical growth.
 - **Specific** — Reference concrete moments from the session, not generic platitudes
 - **Balanced** — Highlight genuine strengths alongside areas to improve
 - **Actionable** — Give clear next steps the user can act on
