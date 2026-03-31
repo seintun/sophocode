@@ -5,6 +5,7 @@ export function buildInterviewerPrompt(input: {
   statement: string;
   pattern: string;
   difficulty: string;
+  currentCode?: string;
 }): { system: string } {
   const config = getSophiaConfig('MOCK_INTERVIEW');
   const voice = config.voice;
@@ -49,6 +50,9 @@ Interview context:
 - **Problem:** ${input.title} (${input.difficulty})
 - **Pattern:** ${input.pattern}
 - **Statement:** ${input.statement}
+
+**Candidate's Progress (Python):**
+${input.currentCode?.trim() || 'The candidate has not started writing code yet.'}
 
 Whenever you're ready — walk me through how you'd approach this.`;
 

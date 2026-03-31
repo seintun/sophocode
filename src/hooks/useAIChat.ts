@@ -90,6 +90,7 @@ export function useAIChat({ mode, problem, currentCode, testResults, sessionId }
       body: {
         mode: chatMode,
         sessionId,
+        currentCode,
         ...problem,
       },
     }),

@@ -5,6 +5,7 @@ export function buildCoachPrompt(input: {
   statement: string;
   pattern: string;
   difficulty: string;
+  currentCode?: string;
 }): { system: string } {
   const config = getSophiaConfig('COACH_ME');
   const voice = config.voice;
@@ -43,7 +44,10 @@ If the user seems frustrated or stuck, respond with empathy: "${voice.frustratio
 Context for this session:
 - **Problem:** ${input.title} (${input.difficulty})
 - **Pattern:** ${input.pattern}
-- **Statement:** ${input.statement}`;
+- **Statement:** ${input.statement}
+
+**User's Current Progress (Python):**
+${input.currentCode?.trim() || 'The user has not started writing code yet.'}`;
 
   return { system };
 }
