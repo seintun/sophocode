@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
+import { MarkdownMessage } from '@/components/ui/MarkdownMessage';
 import type { SessionMode } from '@/generated/prisma/enums';
 
 type TabKey = 'statement' | 'examples' | 'notes' | 'explanation';
@@ -27,7 +28,74 @@ interface ProblemPanelProps {
   mode: SessionMode;
   explanationStream?: { text: string; isLoading: boolean };
   getExplanation?: () => void;
+  /** Used as the localStorage cache key — prefer this over problem title for uniqueness */
+  sessionId?: string;
 }
+
+const LOADING_MESSAGES = [
+  'Reading the problem carefully…',
+  'Breaking down the key concepts…',
+  'Thinking through the approach…',
+  'Crafting a plain-language explanation…',
+  'Almost there…',
+];
+
+function ExplanationLoader() {
+  const [msgIndex, setMsgIndex] = useState(0);
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      setMsgIndex((i) => (i + 1) % LOADING_MESSAGES.length);
+    }, 2200);
+    return () => clearInterval(id);
+  }, []);
+
+  return (
+    <div className="explanation-loader" aria-live="polite" aria-label="Generating explanation">
+      <div className="explanation-loader-avatar">
+        <span className="explanation-loader-ring" />
+        <svg
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+          className="explanation-loader-icon"
+        >
+          <path d="M12 2a10 10 0 1 0 10 10" />
+          <path d="M12 6v6l4 2" />
+        </svg>
+      </div>
+
+      <p key={msgIndex} className="explanation-loader-msg">
+        {LOADING_MESSAGES[msgIndex]}
+      </p>
+
+      <div className="explanation-loader-skeleton">
+        {[100, 85, 92, 60].map((w, i) => (
+          <div
+            key={i}
+            className="explanation-loader-line"
+            style={{ width: `${w}%`, animationDelay: `${i * 0.15}s` }}
+          />
+        ))}
+        <div className="explanation-loader-gap" />
+        {[95, 80, 88].map((w, i) => (
+          <div
+            key={i + 4}
+            className="explanation-loader-line"
+            style={{ width: `${w}%`, animationDelay: `${(i + 4) * 0.15}s` }}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 
 export function ProblemPanel({
   problem,
@@ -36,10 +104,44 @@ export function ProblemPanel({
   mode,
   explanationStream,
   getExplanation,
+  sessionId,
 }: ProblemPanelProps) {
   const showExplanation = mode !== 'MOCK_INTERVIEW';
   const [activeTab, setActiveTab] = useState<TabKey>('statement');
-  const [explanationRequested, setExplanationRequested] = useState(false);
+
+  // Cache key: prefer sessionId (unique per attempt), fall back to problem title
+  const storageKey = `sophia-explanation:${sessionId ?? problem.title}`;
+
+  // Persist explanation across page reloads
+  const [cachedText, setCachedText] = useState<string>(() => {
+    try {
+      return localStorage.getItem(storageKey) ?? '';
+    } catch {
+      return '';
+    }
+  });
+
+  // Save to localStorage whenever the stream finishes loading with content
+  useEffect(() => {
+    const text = explanationStream?.text;
+    const done = text && !explanationStream?.isLoading;
+    if (done) {
+      try {
+        localStorage.setItem(storageKey, text);
+      } catch {
+        // quota exceeded or SSR — silently ignore
+      }
+      setCachedText(text);
+    }
+  }, [explanationStream?.text, explanationStream?.isLoading, storageKey]);
+
+  // What to actually show: live stream text (if any) or cached
+  const displayText = explanationStream?.text || cachedText;
+  const hasContent = Boolean(displayText);
+  const isLoading = Boolean(explanationStream?.isLoading);
+
+  // NOTE: intentionally NOT auto-triggering generation on tab click
+  const handleTabClick = (tab: TabKey) => setActiveTab(tab);
 
   const tabs: Array<{ key: TabKey; label: string }> = [
     { key: 'statement', label: 'Statement' },
@@ -47,14 +149,6 @@ export function ProblemPanel({
     ...(showExplanation ? [{ key: 'explanation' as const, label: 'Explanation' }] : []),
     { key: 'notes', label: 'Notes' },
   ];
-
-  const handleTabClick = (tab: TabKey) => {
-    setActiveTab(tab);
-    if (tab === 'explanation' && !explanationRequested && getExplanation) {
-      setExplanationRequested(true);
-      getExplanation();
-    }
-  };
 
   return (
     <div className="flex h-full flex-col">
@@ -91,6 +185,7 @@ export function ProblemPanel({
       </div>
 
       <div className="flex-1 overflow-y-auto p-4">
+        {/* Statement */}
         <div
           role="tabpanel"
           id="panel-statement"
@@ -99,9 +194,7 @@ export function ProblemPanel({
         >
           {activeTab === 'statement' && (
             <div className="space-y-4">
-              <pre className="whitespace-pre-wrap font-[family-name:var(--font-geist-sans)] text-sm leading-relaxed text-[var(--color-text-primary)]">
-                {problem.statement}
-              </pre>
+              <MarkdownMessage content={problem.statement} />
               {problem.constraints.length > 0 && (
                 <div>
                   <h3 className="mb-2 text-sm font-semibold text-[var(--color-text-secondary)]">
@@ -118,6 +211,7 @@ export function ProblemPanel({
           )}
         </div>
 
+        {/* Examples */}
         <div
           role="tabpanel"
           id="panel-examples"
@@ -158,6 +252,7 @@ export function ProblemPanel({
           )}
         </div>
 
+        {/* Explanation */}
         {showExplanation && (
           <div
             role="tabpanel"
@@ -166,37 +261,96 @@ export function ProblemPanel({
             hidden={activeTab !== 'explanation'}
           >
             {activeTab === 'explanation' && (
-              <div className="space-y-3">
-                {explanationStream?.isLoading && !explanationStream.text && (
-                  <div className="flex items-center gap-2 text-sm text-[var(--color-text-muted)]">
-                    <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-[var(--color-ai-coach)] border-t-transparent" />
-                    Generating explanation...
+              <div className="space-y-4">
+                {/* CTA — not yet generated and not loading */}
+                {!hasContent && !isLoading && (
+                  <div className="explanation-cta">
+                    <div className="explanation-cta-icon" aria-hidden="true">
+                      <svg
+                        width="28"
+                        height="28"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <circle cx="12" cy="12" r="10" />
+                        <path d="M12 16v-4" />
+                        <path d="M12 8h.01" />
+                      </svg>
+                    </div>
+
+                    <h3 className="explanation-cta-title">AI Explanation</h3>
+                    <p className="explanation-cta-desc">
+                      Sophia will break this problem down into plain English — covering the core
+                      concept, the approach, and why it works. Great when you&apos;re stuck or want
+                      a deeper understanding.
+                    </p>
+
+                    <div className="explanation-cta-hint">
+                      <svg
+                        width="12"
+                        height="12"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        aria-hidden="true"
+                      >
+                        <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+                      </svg>
+                      Uses AI · May take 10–20 seconds · Saved for this session
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => getExplanation?.()}
+                      disabled={!getExplanation}
+                      aria-label="Generate AI explanation for this problem"
+                      className="explanation-cta-btn"
+                    >
+                      <svg
+                        width="15"
+                        height="15"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        aria-hidden="true"
+                      >
+                        <polygon points="5 3 19 12 5 21 5 3" />
+                      </svg>
+                      Generate Explanation
+                    </button>
                   </div>
                 )}
-                {explanationStream?.text && (
-                  <div className="whitespace-pre-wrap font-[family-name:var(--font-geist-sans)] text-sm leading-relaxed text-[var(--color-text-primary)]">
-                    {explanationStream.text}
-                    {explanationStream.isLoading && (
-                      <span className="inline-block h-3 w-3 animate-pulse rounded-full bg-[var(--color-ai-coach)]" />
-                    )}
+
+                {/* Loading skeleton */}
+                {isLoading && !hasContent && <ExplanationLoader />}
+
+                {/* Content — live stream or cached */}
+                {hasContent && (
+                  <div className="sophia-explanation">
+                    <MarkdownMessage
+                      content={displayText}
+                      accentColor="var(--color-ai-coach)"
+                      isStreaming={isLoading}
+                      cursorColor="var(--color-ai-coach)"
+                    />
                   </div>
-                )}
-                {!explanationStream?.text && !explanationStream?.isLoading && (
-                  <button
-                    onClick={() => {
-                      // setExplanationRequested is handled in handleTabClick
-                      getExplanation?.();
-                    }}
-                    className="rounded-lg border border-[var(--color-ai-coach)]/30 bg-[var(--color-ai-coach)]/10 px-4 py-2 text-sm text-[var(--color-ai-coach)] transition-colors hover:bg-[var(--color-ai-coach)]/20"
-                  >
-                    Explain this problem
-                  </button>
                 )}
               </div>
             )}
           </div>
         )}
 
+        {/* Notes */}
         <div
           role="tabpanel"
           id="panel-notes"

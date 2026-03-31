@@ -142,6 +142,7 @@ export default function SessionPage() {
 function SessionContent({ session, sessionId }: { session: SessionData; sessionId: string }) {
   const router = useRouter();
   const workspaceRef = useRef<MobileWorkspaceHandle | null>(null);
+  const testRunCountRef = useRef(0);
   const [error, setError] = useState<string | null>(null);
   const [code, setCode] = useState(session.code ?? session.problem.starterCode ?? '');
   const [notes, setNotes] = useState('');
@@ -219,6 +220,7 @@ function SessionContent({ session, sessionId }: { session: SessionData; sessionI
   );
 
   const handleRunTests = useCallback(async () => {
+    testRunCountRef.current++;
     // Only open the sheet programmatically on mobile to avoid scroll locking on desktop
     if (typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches) {
       workspaceRef.current?.openTestResults();
@@ -350,9 +352,10 @@ function SessionContent({ session, sessionId }: { session: SessionData; sessionI
         mode={session.mode}
         explanationStream={explanationStream}
         getExplanation={getExplanation}
+        sessionId={sessionId}
       />
     ),
-    [session, examples, notes, explanationStream, getExplanation],
+    [session, examples, notes, explanationStream, getExplanation, sessionId],
   );
 
   const editorPanel = useMemo(
@@ -485,6 +488,8 @@ function SessionContent({ session, sessionId }: { session: SessionData; sessionI
             problemTitle={session.problem.title}
             constraints={session.problem.constraints}
             codeIsEmpty={code.trim().length === 0}
+            codeLength={code.length}
+            testRunCount={testRunCountRef.current}
           />
         </ErrorBoundary>
       </div>

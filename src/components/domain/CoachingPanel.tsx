@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
+import { MarkdownMessage } from '@/components/ui/MarkdownMessage';
 import { getSophiaConfig, SOPHIA_AVATAR } from '@/lib/sophia';
 import type { SessionMode } from '@/generated/prisma/enums';
 import type { UIMessage } from 'ai';
@@ -224,7 +225,14 @@ export function CoachingPanel({
                     >
                       {isAssistant ? 'Sophia' : 'You'}
                     </div>
-                    <div className="whitespace-pre-wrap">{text}</div>
+                    {isAssistant ? (
+                      <MarkdownMessage
+                        content={text}
+                        accentColor={config.colors.primary}
+                      />
+                    ) : (
+                      <div className="whitespace-pre-wrap">{text}</div>
+                    )}
                   </div>
                 </div>
               );
@@ -260,15 +268,12 @@ export function CoachingPanel({
                   <div className="mb-1 text-xs font-medium" style={{ color: config.colors.text }}>
                     Hint (Level {hintLevel})
                   </div>
-                  <div className="whitespace-pre-wrap">
-                    {hintStream.text}
-                    {hintStream.isLoading && (
-                      <span
-                        className="ml-1 inline-block h-3 w-3 animate-pulse rounded-full"
-                        style={{ backgroundColor: config.colors.primary }}
-                      />
-                    )}
-                  </div>
+                  <MarkdownMessage
+                    content={hintStream.text}
+                    accentColor={config.colors.primary}
+                    isStreaming={hintStream.isLoading}
+                    cursorColor={config.colors.primary}
+                  />
                 </div>
               </div>
             )}

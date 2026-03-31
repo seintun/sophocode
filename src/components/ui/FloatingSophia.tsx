@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback, forwardRef } from 'react';
 import Image from 'next/image';
+import { MarkdownMessage } from '@/components/ui/MarkdownMessage';
 import { SOPHIA_AVATAR, SOPHIA_MODES } from '@/lib/sophia';
 import type { SessionMode } from '@/lib/sophia';
 
@@ -195,7 +196,7 @@ export const FloatingSophia = forwardRef<HTMLButtonElement, FloatingSophiaProps>
                 </div>
               )}
             </button>
-            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 whitespace-nowrap rounded-md bg-[var(--color-bg-elevated)] px-2 py-1 text-xs text-[var(--color-text-secondary)] opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-none">
+            <div className="absolute bottom-full left-0 mb-2 whitespace-nowrap rounded-md bg-[var(--color-bg-elevated)] px-2 py-1 text-xs text-[var(--color-text-secondary)] opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-none">
               {isDimmed ? 'Hide Sophia' : 'Chat with Sophia'}
             </div>
           </div>
@@ -230,23 +231,33 @@ export const FloatingSophia = forwardRef<HTMLButtonElement, FloatingSophiaProps>
                   borderLeft: `2px solid ${config.colors.primary}`,
                 }}
               >
-                {/* Invisible full text reserves height */}
-                <span aria-hidden="true" className="invisible select-none">
-                  {currentMessage}
-                </span>
-                <span
-                  className="absolute inset-0 px-3 py-2 text-xs leading-relaxed"
-                  style={{ color: config.colors.text }}
-                >
-                  {displayed}
-                  {displayed.length < currentMessage.length && (
+                {displayed.length >= currentMessage.length ? (
+                  // Fully typed — render with markdown for styled code/bold/etc
+                  <MarkdownMessage
+                    content={currentMessage}
+                    accentColor={config.colors.primary}
+                    compact
+                    className="text-xs"
+                  />
+                ) : (
+                  // Still animating — plain text to avoid partial-markdown jitter
+                  <>
+                    <span aria-hidden="true" className="invisible select-none">
+                      {currentMessage}
+                    </span>
                     <span
-                      className="ml-0.5 inline-block h-2.5 w-0.5 animate-pulse"
-                      style={{ backgroundColor: config.colors.primary }}
-                      aria-hidden="true"
-                    />
-                  )}
-                </span>
+                      className="absolute inset-0 px-3 py-2 text-xs leading-relaxed"
+                      style={{ color: config.colors.text }}
+                    >
+                      {displayed}
+                      <span
+                        className="ml-0.5 inline-block h-2.5 w-0.5 animate-pulse"
+                        style={{ backgroundColor: config.colors.primary }}
+                        aria-hidden="true"
+                      />
+                    </span>
+                  </>
+                )}
               </div>
             </div>
           )}
