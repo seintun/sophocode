@@ -1,5 +1,59 @@
 # Changelog
 
+## 0.2.0
+
+### Minor Changes
+
+- feat(security,perf): Comprehensive Security & Performance Hardening
+  - Migrated guest ID to server-side httpOnly cookies (replacing localStorage)
+  - Added session ownership validation across all session API routes
+  - Implemented Upstash Redis rate limiting (20 req/min) on AI endpoints
+  - Configured security headers and report-only CSP
+  - Introduced API HOCs (withAuth, withValidIdParams, withAuthAndId) reducing route handler boilerplate by ~50%
+  - Optimized Pyodide WASM prewarming on problem page mount
+  - Added tiered Cache-Control headers and ISR for problem pages
+  - Removed `uuid` package in favor of native `crypto.randomUUID()`
+
+- feat: floating Sophia avatar with coach panel toggle
+  - Added FloatingSophia component with 40px avatar circle and typewriter speech bubbles
+  - Created useFloatingSophia hook with 8 mode-aware triggers and 90s cooldown
+  - Coach panel hidden by default on desktop with smooth grid transition toggle (30/70 to 30/40/30)
+  - Added Cmd+Shift+S keyboard shortcut to toggle coach panel
+  - Contextual nudges for test failures, idle time, session start, and completion
+  - Mobile: avatar above tab bar, click switches to Coach tab and opens sheet
+
+- feat(coaching): Sophia behavioral awareness, hint UX, and coaching panel redesign
+  - Added behavioral awareness triggers (code length, test run count, active tab tracking)
+  - Redesigned hint CTA card with icon, description, and gradient button
+  - Enhanced assistant message bubbles with subtle borders and shadows
+  - Added Sophia prose markdown renderer with custom styles
+  - Implemented persistent hint history and session restore across reloads
+  - Added 3-minute cooldown with countdown for next hint level
+  - Externalized coach/summary model configuration to environment variables
+  - Implemented strict topical guardrails across all prompt templates
+  - Enabled full code editor context for Sophia coaching chat
+  - Redesigned test error UI with improved line mapping accuracy
+  - Fixed pyodide-worker codeLineOffset for correct line number calculation
+
+- feat: session lifecycle management with Pro-Max UI features
+  - Added `expiresAt` and `duration` fields to Session model with 45-minute default
+  - Enforced "one active session per problem" rule (409 on duplicate)
+  - Session extension adds 15 minutes from max(expiresAt, now)
+  - Added resume flow with "Resume" or "End" session options
+  - Timer urgency animations (glow/pulse) for < 5 minutes remaining
+  - Glassmorphism expiration overlay with "View Final Summary"
+  - "End Session" confirmation modal with destructive action button
+  - Auto-clear expired sessions from resume UI when countdown reaches zero
+  - Added comprehensive API tests for sessions endpoint (10 new tests)
+
+### Patch Changes
+
+- fix: resolve hidden bottom tab bar on mobile browsers by switching to dvh units
+- fix: resolve chat response latency and stuck UI during reasoning
+- fix: reinforce grid column constraints and internal panel scrolling
+- fix: resolve react hooks violations in session lifecycle components
+- fix: address all Copilot review threads and CI lint errors
+
 ## 0.1.3
 
 ### Patch Changes
