@@ -4,6 +4,16 @@ import type { NextConfig } from 'next';
 const nextConfig: NextConfig = {
   compress: true,
 
+  // Remove console.log in production builds (keeps console.error and console.warn)
+  compiler: {
+    removeConsole:
+      process.env.NODE_ENV === 'production' ? { exclude: ['error', 'warn', 'log', 'info'] } : false,
+  },
+
+  experimental: {
+    optimizePackageImports: ['lucide-react', '@radix-ui/react-*'],
+  },
+
   images: {
     remotePatterns: [],
     formats: ['image/webp', 'image/avif'],
@@ -31,20 +41,18 @@ const nextConfig: NextConfig = {
           { key: 'Cross-Origin-Resource-Policy', value: 'same-origin' },
         ],
       },
+      // CSP is enforced dynamically in src/proxy.ts with per-request nonces.
+      // This static fallback covers API routes that bypass the proxy.
       {
-        source: '/(.*)',
+        source: '/api/:path*',
         headers: [
           {
-            key: 'Content-Security-Policy-Report-Only',
+            key: 'Content-Security-Policy',
             value: [
-              "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
-              "style-src 'self' 'unsafe-inline'",
-              "img-src 'self' data: blob: https://cdn.jsdelivr.net",
-              "connect-src 'self' https://openrouter.ai https://api.supabase.co https://*.supabase.co",
-              "worker-src 'self' blob:",
-              "font-src 'self' data:",
-              "frame-src 'self'",
+              "default-src 'none'",
+              "frame-ancestors 'none'",
+              "base-uri 'self'",
+              "form-action 'self'",
             ].join('; '),
           },
         ],

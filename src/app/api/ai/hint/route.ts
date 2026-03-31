@@ -6,8 +6,7 @@ import { handleApiError } from '@/lib/errors/api';
 import { isSessionMode } from '@/lib/sophia';
 import { withRateLimit } from '@/lib/ratelimit';
 import { type NextRequest } from 'next/server';
-
-const VALID_LEVELS = [1, 2, 3] as const;
+import { hintRequestSchema, validateBody } from '@/lib/validations';
 
 async function handler(req: NextRequest): Promise<Response> {
   try {
@@ -16,15 +15,17 @@ async function handler(req: NextRequest): Promise<Response> {
     }
 
     const body = await req.json();
-    const { title, statement, pattern, currentCode, testResults, level, mode } = body;
-
-    if (!title || !statement || !pattern || level === undefined) {
-      return new Response('Missing required fields', { status: 400 });
+    const validation = validateBody(hintRequestSchema, body);
+    if (!validation.success) {
+      return new Response(JSON.stringify({ error: validation.error }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
     }
+    const { title, statement, pattern, currentCode, testResults, level, mode } = validation.data;
 
-    if (!VALID_LEVELS.includes(level)) {
-      return new Response('Invalid hint level. Must be 1, 2, or 3.', { status: 400 });
-    }
+    // Zod already validates level is 1-3; cast to literal type for buildHintPrompt
+    const hintLevel = level as 1 | 2 | 3;
 
     const { system, user } = buildHintPrompt({
       title,
@@ -32,7 +33,7 @@ async function handler(req: NextRequest): Promise<Response> {
       pattern,
       currentCode: currentCode || '',
       testResults,
-      level,
+      level: hintLevel,
       mode: isSessionMode(mode) ? mode : undefined,
     });
 
