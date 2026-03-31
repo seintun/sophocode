@@ -541,8 +541,6 @@ function SessionContent({
     ],
   );
 
-
-
   if (error) {
     return (
       <div className="flex h-[calc(100dvh-57px)] items-center justify-center">
@@ -730,7 +728,6 @@ function SessionContent({
             editor={editorPanel}
             testResults={testResultsPanel}
             coach={coachingPanel}
-            onViewSummary={handleEndSession}
             testResultsData={
               testRunResults
                 ? { passed: testRunResults.passed, total: testRunResults.total }

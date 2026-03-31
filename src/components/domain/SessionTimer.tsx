@@ -21,7 +21,7 @@ export function SessionTimer({ startTime, expiresAt, onExtend, className }: Sess
     const updateTimes = () => {
       const now = Date.now();
       setElapsed(Math.max(0, Math.floor((now - start) / 1000)));
-      if (expiry) {
+      if (expiry !== null) {
         setRemaining(Math.max(0, Math.floor((expiry - now) / 1000)));
       } else {
         setRemaining(null);

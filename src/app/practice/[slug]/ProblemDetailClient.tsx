@@ -157,12 +157,15 @@ function ProblemDetailContent({
       setTimeLeft('');
       return;
     }
-    
+
     const updateTime = () => {
       const remaining = Math.max(0, new Date(activeSession.expiresAt).getTime() - Date.now());
       const mins = Math.floor(remaining / 1000 / 60);
       const secs = Math.floor((remaining / 1000) % 60);
       setTimeLeft(`${mins}:${secs.toString().padStart(2, '0')}`);
+      if (remaining <= 0) {
+        setActiveSession(null);
+      }
     };
 
     updateTime();

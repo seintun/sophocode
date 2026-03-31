@@ -13,7 +13,6 @@ import { MobileWorkspace, type MobileWorkspaceHandle } from './MobileWorkspace';
 import { FloatingSophia } from '@/components/ui/FloatingSophia';
 import { useFloatingSophia } from '@/hooks/useFloatingSophia';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
-import { SessionExpiredOverlay } from './SessionExpiredOverlay';
 import type { SessionMode } from '@/lib/sophia';
 
 interface SessionLayoutProps {
@@ -27,14 +26,11 @@ interface SessionLayoutProps {
   constraints?: string[];
   workspaceRef?: React.RefObject<MobileWorkspaceHandle | null>;
   onRunTests?: () => void;
-  onReturnToPractice?: () => void;
   isRunning?: boolean;
-  isExpired?: boolean;
   elapsedSeconds?: number;
   totalSeconds?: number;
   codeIsEmpty?: boolean;
   onCoachToggle?: (isOpen: boolean) => void;
-  onViewSummary?: () => void;
   codeLength?: number;
   testRunCount?: number;
 }
@@ -50,10 +46,7 @@ export function SessionLayout({
   constraints,
   workspaceRef,
   onRunTests,
-  onReturnToPractice,
-  onViewSummary,
   isRunning,
-  isExpired = false,
   elapsedSeconds = 0,
   totalSeconds = 0,
   codeIsEmpty = false,

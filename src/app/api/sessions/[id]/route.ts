@@ -88,7 +88,7 @@ async function patchHandler(
     if (extend) {
       const currentSession = await prisma.session.findUnique({
         where: { id },
-        select: { expiresAt: true, status: true },
+        select: { expiresAt: true, status: true, duration: true },
       });
 
       if (!currentSession) {
@@ -102,7 +102,7 @@ async function patchHandler(
       const currentExpiresAt = currentSession.expiresAt || new Date();
       const baseTime = Math.max(Date.now(), currentExpiresAt.getTime());
       data.expiresAt = new Date(baseTime + 15 * 60 * 1000);
-      data.duration = { increment: 15 };
+      data.duration = { set: (currentSession.duration ?? 0) + 15 };
     }
 
     const session = await prisma.session.update({
