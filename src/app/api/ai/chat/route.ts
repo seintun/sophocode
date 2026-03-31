@@ -6,6 +6,7 @@ import { buildInterviewerPrompt } from '@/lib/ai/prompts/interviewer';
 import { handleApiError } from '@/lib/errors/api';
 import { withRateLimit } from '@/lib/ratelimit';
 import { type NextRequest } from 'next/server';
+import { prisma } from '@/lib/db/prisma';
 
 async function handler(req: NextRequest): Promise<Response> {
   try {
@@ -14,7 +15,7 @@ async function handler(req: NextRequest): Promise<Response> {
     }
 
     const body = await req.json();
-    const { messages, mode, title, statement, pattern, difficulty } = body;
+    const { messages, mode, title, statement, pattern, difficulty, sessionId } = body;
 
     // Validate required fields
     const missingFields: string[] = [];
@@ -44,6 +45,35 @@ async function handler(req: NextRequest): Promise<Response> {
       model: openrouter(MODELS.reasoning),
       system,
       messages: await convertToModelMessages(messages),
+      onFinish: async ({ text }) => {
+        if (!sessionId) return;
+
+        try {
+          // Save the last user message and the assistant message
+          const lastUserMessage = messages[messages.length - 1];
+
+          await prisma.$transaction([
+            // Save USER message if it doesn't exist
+            prisma.sessionMessage.create({
+              data: {
+                sessionId,
+                role: 'USER',
+                content: lastUserMessage.content,
+              },
+            }),
+            // Save ASSISTANT response
+            prisma.sessionMessage.create({
+              data: {
+                sessionId,
+                role: 'ASSISTANT',
+                content: text,
+              },
+            }),
+          ]);
+        } catch (err) {
+          console.error('[api/ai/chat] Failed to persist messages:', err);
+        }
+      },
     });
 
     return result.toUIMessageStreamResponse();

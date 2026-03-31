@@ -16,7 +16,7 @@ import { useAIChat } from '@/hooks/useAIChat';
 import { useCodeExecution } from '@/hooks/useCodeExecution';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { Button } from '@/components/ui/Button';
-import type { SessionMode } from '@/generated/prisma/enums';
+import { SessionMode, SessionStatus, SessionOutcome, MessageRole } from '@/generated/prisma/enums';
 import type { MobileWorkspaceHandle } from '@/components/domain/MobileWorkspace';
 
 interface TestCase {
@@ -57,6 +57,12 @@ interface SessionData {
   hints: Array<{
     id: string;
     level: number;
+    content: string;
+    createdAt: string;
+  }>;
+  messages: Array<{
+    id: string;
+    role: MessageRole;
     content: string;
     createdAt: string;
   }>;
@@ -187,27 +193,53 @@ function SessionContent({ session, sessionId }: { session: SessionData; sessionI
     testResults: testRunResults
       ? { passed: testRunResults.passed, total: testRunResults.total }
       : undefined,
+    sessionId,
   });
 
-  // Sync existing hints from session into chat history on load
+  // Sync existing hints and messages from session into chat history on load
   useEffect(() => {
-    if (session.hints && session.hints.length > 0) {
-      const hintMessages = session.hints.map((h) => ({
-        id: h.id,
-        role: 'assistant' as const,
-        content: h.content,
-        parts: [{ type: 'text', text: h.content }],
-        annotations: [{ type: 'hint', level: h.level }],
-      }));
+    const allMessages: any[] = [];
 
-      // Merge with any existing messages
+    // Process Hints
+    if (session.hints && session.hints.length > 0) {
+      const maxLevel = Math.max(0, ...session.hints.map((h) => h.level));
+      setHintLevel(maxLevel);
+
+      allMessages.push(
+        ...session.hints.map((h) => ({
+          id: h.id,
+          role: 'assistant' as const,
+          content: h.content,
+          parts: [{ type: 'text', text: h.content }],
+          annotations: [{ type: 'hint', level: h.level }],
+          createdAt: new Date(h.createdAt),
+        })),
+      );
+    }
+
+    // Process Regular Messages
+    if (session.messages && session.messages.length > 0) {
+      allMessages.push(
+        ...session.messages.map((m) => ({
+          id: m.id,
+          role: m.role.toLowerCase() as any, // 'user' or 'assistant'
+          content: m.content,
+          createdAt: new Date(m.createdAt),
+        })),
+      );
+    }
+
+    if (allMessages.length > 0) {
+      // Sort chronologically
+      allMessages.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+
       setMessages((prev) => {
         const existingIds = new Set(prev.map((m) => m.id));
-        const newHints = (hintMessages as any[]).filter((h) => !existingIds.has(h.id));
-        return [...prev, ...newHints];
+        const newMessages = allMessages.filter((m) => !existingIds.has(m.id));
+        return [...prev, ...newMessages];
       });
     }
-  }, [session.hints, setMessages]);
+  }, [session.hints, session.messages, setMessages]);
 
   const handleCodeChange = useCallback(
     async (newCode: string) => {

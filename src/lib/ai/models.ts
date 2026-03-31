@@ -1,4 +1,4 @@
 export const MODELS = {
-  reasoning: 'openrouter/free',
-  summary: 'openrouter/free',
+  reasoning: 'x-ai/grok-4.1-fast',
+  summary: 'x-ai/grok-4.1-fast',
 } as const;

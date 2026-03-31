@@ -22,6 +22,7 @@ interface UseAIChatOptions {
   problem: ProblemContext;
   currentCode?: string;
   testResults?: { passed: number; total: number };
+  sessionId?: string;
 }
 
 async function* readSseStream(response: Response) {
@@ -80,7 +81,7 @@ function extractTextFromSse(
   });
 }
 
-export function useAIChat({ mode, problem, currentCode, testResults }: UseAIChatOptions) {
+export function useAIChat({ mode, problem, currentCode, testResults, sessionId }: UseAIChatOptions) {
   const chatMode = mode === 'MOCK_INTERVIEW' ? 'interviewer' : 'coach';
 
   const { messages, sendMessage, status, stop, setMessages } = useChat({
@@ -88,6 +89,7 @@ export function useAIChat({ mode, problem, currentCode, testResults }: UseAIChat
       api: '/api/ai/chat',
       body: {
         mode: chatMode,
+        sessionId,
         ...problem,
       },
     }),
