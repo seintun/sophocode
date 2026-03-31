@@ -1,8 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { cn } from '@/lib/utils';
-import { MarkdownMessage } from '@/components/ui/MarkdownMessage';
+import { StreamedMarkdownMessage } from '@/components/ui/StreamedMarkdownMessage';
+import { useExplanationCache } from '@/hooks/useExplanationCache';
+import { ExplanationLoader } from '@/components/ui/ExplanationLoader';
 import type { SessionMode } from '@/generated/prisma/enums';
 
 type TabKey = 'statement' | 'examples' | 'notes' | 'explanation';
@@ -32,71 +34,6 @@ interface ProblemPanelProps {
   sessionId?: string;
 }
 
-const LOADING_MESSAGES = [
-  'Reading the problem carefully…',
-  'Breaking down the key concepts…',
-  'Thinking through the approach…',
-  'Crafting a plain-language explanation…',
-  'Almost there…',
-];
-
-function ExplanationLoader() {
-  const [msgIndex, setMsgIndex] = useState(0);
-
-  useEffect(() => {
-    const id = setInterval(() => {
-      setMsgIndex((i) => (i + 1) % LOADING_MESSAGES.length);
-    }, 2200);
-    return () => clearInterval(id);
-  }, []);
-
-  return (
-    <div className="explanation-loader" aria-live="polite" aria-label="Generating explanation">
-      <div className="explanation-loader-avatar">
-        <span className="explanation-loader-ring" />
-        <svg
-          width="20"
-          height="20"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          aria-hidden="true"
-          className="explanation-loader-icon"
-        >
-          <path d="M12 2a10 10 0 1 0 10 10" />
-          <path d="M12 6v6l4 2" />
-        </svg>
-      </div>
-
-      <p key={msgIndex} className="explanation-loader-msg">
-        {LOADING_MESSAGES[msgIndex]}
-      </p>
-
-      <div className="explanation-loader-skeleton">
-        {[100, 85, 92, 60].map((w, i) => (
-          <div
-            key={i}
-            className="explanation-loader-line"
-            style={{ width: `${w}%`, animationDelay: `${i * 0.15}s` }}
-          />
-        ))}
-        <div className="explanation-loader-gap" />
-        {[95, 80, 88].map((w, i) => (
-          <div
-            key={i + 4}
-            className="explanation-loader-line"
-            style={{ width: `${w}%`, animationDelay: `${(i + 4) * 0.15}s` }}
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-
 export function ProblemPanel({
   problem,
   notes,
@@ -109,38 +46,18 @@ export function ProblemPanel({
   const showExplanation = mode !== 'MOCK_INTERVIEW';
   const [activeTab, setActiveTab] = useState<TabKey>('statement');
 
-  // Cache key: prefer sessionId (unique per attempt), fall back to problem title
-  const storageKey = `sophia-explanation:${sessionId ?? problem.title}`;
+  // Cache key and data
+  const storageKey = useMemo(
+    () => `sophia-explanation:${sessionId ?? problem.title}`,
+    [sessionId, problem.title],
+  );
 
-  // Persist explanation across page reloads
-  const [cachedText, setCachedText] = useState<string>(() => {
-    try {
-      return localStorage.getItem(storageKey) ?? '';
-    } catch {
-      return '';
-    }
-  });
+  const { cachedText } = useExplanationCache(storageKey, explanationStream);
 
-  // Save to localStorage whenever the stream finishes loading with content
-  useEffect(() => {
-    const text = explanationStream?.text;
-    const done = text && !explanationStream?.isLoading;
-    if (done) {
-      try {
-        localStorage.setItem(storageKey, text);
-      } catch {
-        // quota exceeded or SSR — silently ignore
-      }
-      setCachedText(text);
-    }
-  }, [explanationStream?.text, explanationStream?.isLoading, storageKey]);
-
-  // What to actually show: live stream text (if any) or cached
   const displayText = explanationStream?.text || cachedText;
   const hasContent = Boolean(displayText);
   const isLoading = Boolean(explanationStream?.isLoading);
 
-  // NOTE: intentionally NOT auto-triggering generation on tab click
   const handleTabClick = (tab: TabKey) => setActiveTab(tab);
 
   const tabs: Array<{ key: TabKey; label: string }> = [
@@ -194,7 +111,7 @@ export function ProblemPanel({
         >
           {activeTab === 'statement' && (
             <div className="space-y-4">
-              <MarkdownMessage content={problem.statement} />
+              <StreamedMarkdownMessage content={problem.statement} />
               {problem.constraints.length > 0 && (
                 <div>
                   <h3 className="mb-2 text-sm font-semibold text-[var(--color-text-secondary)]">
@@ -337,9 +254,9 @@ export function ProblemPanel({
                 {/* Content — live stream or cached */}
                 {hasContent && (
                   <div className="sophia-explanation">
-                    <MarkdownMessage
+                    <StreamedMarkdownMessage
                       content={displayText}
-                      accentColor="var(--color-ai-coach)"
+                      accentColor="#818cf8"
                       isStreaming={isLoading}
                       cursorColor="var(--color-ai-coach)"
                     />

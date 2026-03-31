@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback, forwardRef } from 'react';
 import Image from 'next/image';
-import { MarkdownMessage } from '@/components/ui/MarkdownMessage';
+import { StreamedMarkdownMessage } from '@/components/ui/StreamedMarkdownMessage';
 import { SOPHIA_AVATAR, SOPHIA_MODES } from '@/lib/sophia';
 import type { SessionMode } from '@/lib/sophia';
 
@@ -82,9 +82,12 @@ export const FloatingSophia = forwardRef<HTMLButtonElement, FloatingSophiaProps>
         return;
       }
 
+      const typingDuration = currentMessage.length * CHAR_DELAY_MS;
+      const totalDuration = Math.max(AUTO_DISMISS_MS, typingDuration + 4000);
+
       dismissTimerRef.current = setTimeout(() => {
         handleDismiss();
-      }, AUTO_DISMISS_MS);
+      }, totalDuration);
 
       return () => {
         if (dismissTimerRef.current) {
@@ -231,33 +234,14 @@ export const FloatingSophia = forwardRef<HTMLButtonElement, FloatingSophiaProps>
                   borderLeft: `2px solid ${config.colors.primary}`,
                 }}
               >
-                {displayed.length >= currentMessage.length ? (
-                  // Fully typed — render with markdown for styled code/bold/etc
-                  <MarkdownMessage
-                    content={currentMessage}
-                    accentColor={config.colors.primary}
-                    compact
-                    className="text-xs"
-                  />
-                ) : (
-                  // Still animating — plain text to avoid partial-markdown jitter
-                  <>
-                    <span aria-hidden="true" className="invisible select-none">
-                      {currentMessage}
-                    </span>
-                    <span
-                      className="absolute inset-0 px-3 py-2 text-xs leading-relaxed"
-                      style={{ color: config.colors.text }}
-                    >
-                      {displayed}
-                      <span
-                        className="ml-0.5 inline-block h-2.5 w-0.5 animate-pulse"
-                        style={{ backgroundColor: config.colors.primary }}
-                        aria-hidden="true"
-                      />
-                    </span>
-                  </>
-                )}
+                <StreamedMarkdownMessage
+                  content={displayed}
+                  accentColor={config.colors.primary}
+                  compact
+                  className="text-xs"
+                  isStreaming={displayed.length < (currentMessage?.length || 0)}
+                  cursorColor={config.colors.primary}
+                />
               </div>
             </div>
           )}

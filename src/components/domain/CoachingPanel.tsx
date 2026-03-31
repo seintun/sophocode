@@ -4,7 +4,8 @@ import { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
-import { MarkdownMessage } from '@/components/ui/MarkdownMessage';
+import { StreamedMarkdownMessage } from '@/components/ui/StreamedMarkdownMessage';
+import { HintLoader } from '@/components/ui/HintLoader';
 import { getSophiaConfig, SOPHIA_AVATAR } from '@/lib/sophia';
 import type { SessionMode } from '@/generated/prisma/enums';
 import type { UIMessage } from 'ai';
@@ -226,9 +227,11 @@ export function CoachingPanel({
                       {isAssistant ? 'Sophia' : 'You'}
                     </div>
                     {isAssistant ? (
-                      <MarkdownMessage
-                        content={text}
+                      <StreamedMarkdownMessage
+                        content={hintStream.text}
                         accentColor={config.colors.primary}
+                        isStreaming={hintStream.isLoading}
+                        cursorColor={config.colors.primary}
                       />
                     ) : (
                       <div className="whitespace-pre-wrap">{text}</div>
@@ -238,8 +241,8 @@ export function CoachingPanel({
               );
             })}
 
-            {/* Hint stream */}
-            {hintStream.text && (
+            {/* Hint stream - show if loading OR has text */}
+            {(hintStream.text || hintStream.isLoading) && (
               <div className="flex gap-2">
                 {!avatarError ? (
                   <div className="relative h-7 w-7 shrink-0 overflow-hidden rounded-full">
@@ -268,12 +271,16 @@ export function CoachingPanel({
                   <div className="mb-1 text-xs font-medium" style={{ color: config.colors.text }}>
                     Hint (Level {hintLevel})
                   </div>
-                  <MarkdownMessage
-                    content={hintStream.text}
-                    accentColor={config.colors.primary}
-                    isStreaming={hintStream.isLoading}
-                    cursorColor={config.colors.primary}
-                  />
+                  {hintStream.text ? (
+                    <StreamedMarkdownMessage
+                      content={hintStream.text}
+                      accentColor={config.colors.primary}
+                      isStreaming={hintStream.isLoading}
+                      cursorColor={config.colors.primary}
+                    />
+                  ) : (
+                    <HintLoader level={hintLevel} />
+                  )}
                 </div>
               </div>
             )}
