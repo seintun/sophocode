@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db/prisma';
 import { withErrorHandling } from '@/lib/errors/api';
 import { getGuestIdFromCookie } from '@/lib/guest';
 import { cookies } from 'next/headers';
+import { cleanupExpiredSessions } from '@/lib/session/expiry';
 
 async function handler(_request: NextRequest): Promise<Response> {
   try {
@@ -13,17 +14,24 @@ async function handler(_request: NextRequest): Promise<Response> {
       return NextResponse.json({ error: 'Unauthorized: Guest ID missing' }, { status: 401 });
     }
 
+    cleanupExpiredSessions(guestId).catch((err) => {
+      console.error('Failed to clean up expired sessions for guest', guestId, err);
+    });
+
     const now = new Date();
     const weekAgo = new Date(now);
     weekAgo.setDate(weekAgo.getDate() - 7);
 
+    // Run all independent queries in parallel to minimize P99 latency
     const [
       totalSolved,
       patternsPracticed,
       sessionsThisWeek,
       recentSessions,
       needsRefresh,
-      inProgressProblems,
+      allAttempted,
+      problemHistory,
+      allProblems,
     ] = await Promise.all([
       prisma.userProblemState.count({
         where: { guestId, solveCount: { gt: 0 } },
@@ -62,20 +70,6 @@ async function handler(_request: NextRequest): Promise<Response> {
         orderBy: { nextReviewAt: 'asc' },
       }),
       prisma.userProblemState.findMany({
-        where: { guestId, mastery: 'IN_PROGRESS' },
-        take: 3,
-        select: {
-          problem: {
-            select: { id: true, title: true, slug: true, pattern: true, difficulty: true },
-          },
-          attemptCount: true,
-        },
-        orderBy: { lastAttemptedAt: 'desc' },
-      }),
-    ]);
-
-    const [allAttempted, problemHistory] = await Promise.all([
-      prisma.userProblemState.findMany({
         where: { guestId },
         select: { problemId: true },
       }),
@@ -93,7 +87,86 @@ async function handler(_request: NextRequest): Promise<Response> {
           },
         },
       }),
+      prisma.problem.findMany({
+        select: { pattern: true },
+      }),
     ]);
+
+    // Fetch session history for problem history items
+    const historyProblemIds = Array.from(new Set(problemHistory.map((item) => item.problem.id)));
+    const historySessions =
+      historyProblemIds.length > 0
+        ? await prisma.session.findMany({
+            where: {
+              guestId,
+              problemId: { in: historyProblemIds },
+            },
+            orderBy: { startedAt: 'desc' },
+            select: {
+              id: true,
+              problemId: true,
+              status: true,
+              expiresAt: true,
+            },
+          })
+        : [];
+
+    const latestSessionMeta = new Map<
+      string,
+      {
+        latestSessionId: string | null;
+        latestCompletedSessionId: string | null;
+        sessionStatus: 'ACTIVE' | 'COMPLETED' | 'ABANDONED' | null;
+      }
+    >();
+
+    for (const session of historySessions) {
+      if (!latestSessionMeta.has(session.problemId)) {
+        let sessionStatus: 'ACTIVE' | 'COMPLETED' | 'ABANDONED' | null = null;
+        if (session.status === 'COMPLETED') {
+          sessionStatus = 'COMPLETED';
+        } else if (session.status === 'ABANDONED') {
+          sessionStatus = 'ABANDONED';
+        } else if (
+          session.status === 'IN_PROGRESS' &&
+          (session.expiresAt == null || session.expiresAt.getTime() > now.getTime())
+        ) {
+          sessionStatus = 'ACTIVE';
+        } else if (session.status === 'IN_PROGRESS') {
+          sessionStatus = 'ABANDONED';
+        }
+
+        latestSessionMeta.set(session.problemId, {
+          latestSessionId: session.id,
+          latestCompletedSessionId: session.status === 'COMPLETED' ? session.id : null,
+          sessionStatus,
+        });
+      }
+
+      const meta = latestSessionMeta.get(session.problemId);
+      if (meta && meta.latestCompletedSessionId == null && session.status === 'COMPLETED') {
+        meta.latestCompletedSessionId = session.id;
+      }
+    }
+
+    const problemHistoryWithSessionMeta = problemHistory.map((item) => {
+      const meta = latestSessionMeta.get(item.problem.id);
+      return {
+        ...item,
+        latestSessionId: meta?.latestSessionId ?? null,
+        latestCompletedSessionId: meta?.latestCompletedSessionId ?? null,
+        sessionStatus: meta?.sessionStatus ?? null,
+      };
+    });
+
+    const inProgressProblems = problemHistoryWithSessionMeta
+      .filter((item) => item.sessionStatus === 'ACTIVE')
+      .slice(0, 3)
+      .map((item) => ({
+        problem: item.problem,
+        attemptCount: item.attemptCount,
+      }));
+
     const attemptedIds = new Set(allAttempted.map((s) => s.problemId));
 
     const recommendedProblem = await prisma.problem.findFirst({
@@ -105,23 +178,23 @@ async function handler(_request: NextRequest): Promise<Response> {
       select: { id: true, title: true, slug: true, pattern: true, difficulty: true },
     });
 
-    const allProblems = await prisma.problem.findMany({
-      select: { pattern: true },
-    });
     const problemsByPattern = new Map<string, number>();
     for (const p of allProblems) {
       problemsByPattern.set(p.pattern, (problemsByPattern.get(p.pattern) ?? 0) + 1);
     }
 
     const patternStats = Array.from(problemsByPattern.entries()).map(([pattern, total]) => {
-      const states = problemHistory.filter((h) => h.problem.pattern === pattern);
+      const states = problemHistoryWithSessionMeta.filter((h) => h.problem.pattern === pattern);
+      const mastered = states.filter((s) => s.mastery === 'MASTERED').length;
+      const inProgress = states.filter((s) => s.mastery === 'IN_PROGRESS').length;
+      const needsRefreshCount = states.filter((s) => s.mastery === 'NEEDS_REFRESH').length;
       return {
         pattern,
         total,
-        mastered: states.filter((s) => s.mastery === 'MASTERED').length,
-        inProgress: states.filter((s) => s.mastery === 'IN_PROGRESS').length,
-        needsRefresh: states.filter((s) => s.mastery === 'NEEDS_REFRESH').length,
-        unseen: total - states.length,
+        mastered,
+        inProgress,
+        needsRefresh: needsRefreshCount,
+        unseen: Math.max(total - mastered - inProgress - needsRefreshCount, 0),
       };
     });
 
@@ -137,11 +210,11 @@ async function handler(_request: NextRequest): Promise<Response> {
         inProgressProblems,
         recommendedProblem,
         patternStats,
-        problemHistory,
+        problemHistory: problemHistoryWithSessionMeta,
       },
       {
         headers: {
-          'Cache-Control': 'private, max-age=300, stale-while-revalidate=3600',
+          'Cache-Control': 'private, no-store, max-age=0',
         },
       },
     );
@@ -151,4 +224,40 @@ async function handler(_request: NextRequest): Promise<Response> {
   }
 }
 
+async function resetHandler(_request: NextRequest): Promise<Response> {
+  try {
+    const cookieStore = await cookies();
+    const guestId = getGuestIdFromCookie(cookieStore);
+
+    if (!guestId) {
+      return NextResponse.json({ error: 'Unauthorized: Guest ID missing' }, { status: 401 });
+    }
+
+    const now = new Date();
+    const [deletedSessions, deletedProblemStates, updatedProfile] = await prisma.$transaction([
+      prisma.session.deleteMany({ where: { guestId } }),
+      prisma.userProblemState.deleteMany({ where: { guestId } }),
+      prisma.userProfile.updateMany({
+        where: { guestId },
+        data: {
+          currentStreak: 0,
+          longestStreak: 0,
+          streakLastWonAt: null,
+          lastActivityAt: now,
+        },
+      }),
+    ]);
+
+    return NextResponse.json({
+      deletedSessions: deletedSessions.count,
+      deletedProblemStates: deletedProblemStates.count,
+      updatedProfile: updatedProfile.count,
+    });
+  } catch (error) {
+    console.error('Failed to reset progress:', error);
+    return NextResponse.json({ error: 'Failed to reset progress' }, { status: 500 });
+  }
+}
+
 export const GET = withErrorHandling(handler);
+export const DELETE = withErrorHandling(resetHandler);

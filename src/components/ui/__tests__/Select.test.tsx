@@ -9,37 +9,40 @@ const options = [
 ];
 
 describe('Select', () => {
-  it('renders select element with options', () => {
+  it('renders trigger with selected label', () => {
     render(<Select options={options} onChange={() => {}} />);
-    expect(screen.getByRole('combobox')).toBeInTheDocument();
+    expect(screen.getByRole('button')).toBeInTheDocument();
     expect(screen.getByText('Option A')).toBeInTheDocument();
-    expect(screen.getByText('Option B')).toBeInTheDocument();
   });
 
-  it('calls onChange with value string when selection changes', async () => {
+  it('calls onChange with value string when option is selected', async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
     render(<Select options={options} onChange={onChange} />);
 
-    await user.selectOptions(screen.getByRole('combobox'), 'b');
+    await user.click(screen.getByRole('button'));
+    await user.click(screen.getByRole('option', { name: /Option B/i }));
     expect(onChange).toHaveBeenCalledWith('b');
   });
 
-  it('shows placeholder option when provided', () => {
+  it('shows placeholder label when provided', () => {
     render(<Select options={options} placeholder="Pick one" onChange={() => {}} />);
     expect(screen.getByText('Pick one')).toBeInTheDocument();
   });
 
-  it('disabled placeholder cannot be selected', () => {
-    render(<Select options={options} placeholder="Pick one" onChange={() => {}} />);
-    const placeholderOption = screen.getByText('Pick one');
-    expect(placeholderOption).toHaveAttribute('disabled');
+  it('closes listbox when clicking outside', async () => {
+    const user = userEvent.setup();
+    render(<Select options={options} onChange={() => {}} />);
+    await user.click(screen.getByRole('button'));
+    expect(screen.getByRole('listbox')).toBeInTheDocument();
+    await user.click(document.body);
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
   });
 
   it('merges custom className', () => {
     render(<Select options={options} onChange={() => {}} className="custom-sel" />);
-    const select = screen.getByRole('combobox');
-    expect(select.className).toContain('custom-sel');
-    expect(select.className).toContain('w-full');
+    const root = screen.getByRole('button').parentElement;
+    expect(root?.className).toContain('custom-sel');
+    expect(root?.className).toContain('w-full');
   });
 });

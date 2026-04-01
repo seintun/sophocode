@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/prisma';
-import type { SessionStatus, SessionOutcome } from '@/generated/prisma/enums';
+import type { SessionStatus, SessionOutcome, MasteryState } from '@/generated/prisma/enums';
 import { handleApiError, withAuthAndId } from '@/lib/errors/api';
 import { requireOwnership } from '@/lib/auth/session-auth';
 
@@ -47,6 +47,7 @@ async function getHandler(
         messages: {
           orderBy: { createdAt: 'asc' },
         },
+        feedback: true,
       },
     });
 
@@ -109,6 +110,28 @@ async function patchHandler(
       where: { id },
       data,
     });
+
+    // Reset mastery to UNSEEN when session is abandoned and no completed session exists
+    if (status === 'ABANDONED') {
+      const completedSession = await prisma.session.findFirst({
+        where: {
+          guestId,
+          problemId: session.problemId,
+          status: 'COMPLETED',
+        },
+      });
+
+      if (!completedSession) {
+        await prisma.userProblemState.updateMany({
+          where: {
+            guestId,
+            problemId: session.problemId,
+            mastery: 'IN_PROGRESS' as MasteryState,
+          },
+          data: { mastery: 'UNSEEN' as MasteryState },
+        });
+      }
+    }
 
     return NextResponse.json(session);
   } catch (error) {

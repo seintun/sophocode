@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from 'next/server';
+import { after } from 'next/server';
 import { generateText } from 'ai';
 import { prisma } from '@/lib/db/prisma';
 import { openrouter } from '@/lib/ai/provider';
@@ -62,49 +63,7 @@ async function handler(
       ? 0
       : Math.floor((Date.now() - session.startedAt.getTime()) / 1000);
 
-    let strengths = 'You showed persistence in working through the problem.';
-    let weaknesses = 'Consider reviewing the core pattern concepts.';
-    let suggestions = 'Practice similar problems to reinforce the pattern.';
-    let complexityNote = 'Review the time and space complexity of your solution.';
-
-    if (process.env.OPENROUTER_API_KEY) {
-      try {
-        const { system, user } = buildSummaryPrompt({
-          title: session.problem.title,
-          pattern: session.problem.pattern,
-          finalCode: session.code ?? latestRun?.code ?? '',
-          testResults: { passed, total },
-          hintsUsed,
-          timeSpentSeconds,
-        });
-
-        const result = await generateText({
-          model: openrouter(MODELS.summary),
-          system,
-          prompt: user,
-        });
-
-        const parsed = parseSummarySections(result.text);
-        if (parsed) {
-          ({ strengths, weaknesses, suggestions, complexityNote } = parsed);
-        }
-      } catch (aiError) {
-        console.error('AI summary generation failed, using fallback:', aiError);
-      }
-    }
-
-    if (!session.feedback) {
-      await prisma.sessionFeedback.create({
-        data: {
-          sessionId: id,
-          strengths,
-          weaknesses,
-          suggestions,
-          complexityNote,
-        },
-      });
-    }
-
+    // Calculate mastery state (fast, no AI)
     const solved = outcome === 'SOLVED';
     const existingState = await prisma.userProblemState.findFirst({
       where: {
@@ -122,67 +81,12 @@ async function handler(
     });
     const nextReviewAt = computeNextReviewDate(nextMastery);
 
-    await prisma.userProblemState.upsert({
+    // Mark session COMPLETED first (idempotent transition)
+    const completionResult = await prisma.session.updateMany({
       where: {
-        guestId_problemId: {
-          guestId: session.guestId,
-          problemId: session.problemId,
-        },
+        id,
+        status: 'IN_PROGRESS',
       },
-      update: {
-        mastery: nextMastery,
-        lastAttemptedAt: new Date(),
-        nextReviewAt,
-        attemptCount: { increment: 1 },
-        solveCount: solved ? { increment: 1 } : undefined,
-      },
-      create: {
-        guestId: session.guestId,
-        problemId: session.problemId,
-        mastery: nextMastery,
-        lastAttemptedAt: new Date(),
-        nextReviewAt,
-        attemptCount: 1,
-        solveCount: solved ? 1 : 0,
-      },
-    });
-
-    let currentStreak: number | null = null;
-    if (solved) {
-      const profile = await prisma.userProfile.findUnique({ where: { guestId: session.guestId } });
-      const streakResult = calculateStreak(
-        profile?.lastActivityAt ?? null,
-        profile?.streakLastWonAt ?? null,
-        profile?.currentStreak ?? 0,
-        profile?.longestStreak ?? 0,
-      );
-
-      const coinsEarned = 1;
-      const isDailyChallenge = session.problem.dailyChallengeDate != null;
-
-      await prisma.userProfile.upsert({
-        where: { guestId: session.guestId },
-        create: {
-          guestId: session.guestId,
-          currentStreak: streakResult.current,
-          longestStreak: streakResult.longest,
-          lastActivityAt: streakResult.lastActivityAt,
-          streakLastWonAt: new Date(),
-          coins: isDailyChallenge ? coinsEarned + 10 : coinsEarned,
-        },
-        update: {
-          currentStreak: streakResult.current,
-          longestStreak: streakResult.longest,
-          lastActivityAt: streakResult.lastActivityAt,
-          streakLastWonAt: streakResult.wonToday ? undefined : new Date(),
-          coins: { increment: isDailyChallenge ? coinsEarned + 10 : coinsEarned },
-        },
-      });
-      currentStreak = streakResult.current;
-    }
-
-    const updatedSession = await prisma.session.update({
-      where: { id },
       data: {
         status: 'COMPLETED',
         outcome,
@@ -190,10 +94,15 @@ async function handler(
       },
     });
 
-    return NextResponse.json({
-      sessionId: updatedSession.id,
+    if (completionResult.count === 0) {
+      return NextResponse.json({ error: 'Session already finalized' }, { status: 400 });
+    }
+
+    // Return immediately - feedback will be generated in background
+    const response = NextResponse.json({
+      sessionId: id,
       outcome,
-      feedback: { strengths, weaknesses, suggestions, complexityNote },
+      feedback: null,
       stats: {
         timeSpentSeconds,
         hintsUsed,
@@ -201,8 +110,29 @@ async function handler(
         total,
       },
       mastery: nextMastery,
-      streak: currentStreak != null ? { current: currentStreak } : null,
+      streak: null,
     });
+
+    // Background tasks: AI feedback generation + secondary DB writes
+    after(() =>
+      generateBackgroundFeedback({
+        sessionId: id,
+        guestId: session.guestId,
+        problemId: session.problemId,
+        problem: session.problem,
+        finalCode: session.code ?? latestRun?.code ?? '',
+        passed,
+        total,
+        hintsUsed,
+        timeSpentSeconds,
+        solved,
+        nextMastery,
+        nextReviewAt,
+        dailyChallengeDate: session.problem.dailyChallengeDate,
+      }).catch((err) => console.error('Background feedback failed:', err)),
+    );
+
+    return response;
   } catch (error) {
     return handleApiError(
       new Response('', { status: 500 }),
@@ -238,9 +168,170 @@ function parseSummarySections(text: string): {
       return null;
     }
 
-    return { strengths, weaknesses, suggestions, complexityNote };
+    // Ensure content is prepared for markdown parsing by adding leading/trailing newlines
+    return {
+      strengths: strengths ? `\n${strengths}\n` : '',
+      weaknesses: weaknesses ? `\n${weaknesses}\n` : '',
+      suggestions: suggestions ? `\n${suggestions}\n` : '',
+      complexityNote: complexityNote ? `\n${complexityNote}\n` : '',
+    };
   } catch {
     return null;
+  }
+}
+
+async function generateBackgroundFeedback({
+  sessionId,
+  guestId,
+  problemId,
+  problem,
+  finalCode,
+  passed,
+  total,
+  hintsUsed,
+  timeSpentSeconds,
+  solved,
+  nextMastery,
+  nextReviewAt,
+  dailyChallengeDate,
+}: {
+  sessionId: string;
+  guestId: string;
+  problemId: string;
+  problem: { title: string; pattern: string; dailyChallengeDate: Date | null };
+  finalCode: string;
+  passed: number;
+  total: number;
+  hintsUsed: number;
+  timeSpentSeconds: number;
+  solved: boolean;
+  nextMastery: MasteryState;
+  nextReviewAt: Date;
+  dailyChallengeDate: Date | null;
+}) {
+  // AI feedback generation
+  let strengths = 'You showed persistence in working through the problem.';
+  let weaknesses = 'Consider reviewing the core pattern concepts.';
+  let suggestions = 'Practice similar problems to reinforce the pattern.';
+  let complexityNote = 'Review the time and space complexity of your solution.';
+
+  let aiFailed = false;
+  if (process.env.OPENROUTER_API_KEY) {
+    try {
+      const { system, user } = buildSummaryPrompt({
+        title: problem.title,
+        pattern: problem.pattern,
+        finalCode,
+        testResults: { passed, total },
+        hintsUsed,
+        timeSpentSeconds,
+      });
+
+      const result = await generateText({
+        model: openrouter(MODELS.summary),
+        system,
+        prompt: user,
+      });
+
+      const parsed = parseSummarySections(result.text);
+      if (parsed) {
+        ({ strengths, weaknesses, suggestions, complexityNote } = parsed);
+      }
+    } catch (aiError) {
+      aiFailed = true;
+      console.error('AI summary generation failed, using fallback:', aiError);
+    }
+  }
+
+  // Save feedback immediately (upsert to guard against race conditions)
+  // This ensures feedback is always available even if subsequent DB operations fail
+  await prisma.sessionFeedback.upsert({
+    where: { sessionId },
+    update: {
+      strengths,
+      weaknesses,
+      suggestions,
+      complexityNote,
+    },
+    create: {
+      sessionId,
+      strengths,
+      weaknesses,
+      suggestions,
+      complexityNote,
+    },
+  });
+
+  // Update user problem state and profile streak in parallel where possible
+  const problemStatePromise = prisma.userProblemState.upsert({
+    where: {
+      guestId_problemId: {
+        guestId,
+        problemId,
+      },
+    },
+    update: {
+      mastery: nextMastery,
+      lastAttemptedAt: new Date(),
+      nextReviewAt,
+      attemptCount: { increment: 1 },
+      solveCount: solved ? { increment: 1 } : undefined,
+    },
+    create: {
+      guestId,
+      problemId,
+      mastery: nextMastery,
+      lastAttemptedAt: new Date(),
+      nextReviewAt,
+      attemptCount: 1,
+      solveCount: solved ? 1 : 0,
+    },
+  });
+
+  // Update profile streak (only if solved)
+  const profilePromise = solved
+    ? (async () => {
+        const profile = await prisma.userProfile.findUnique({
+          where: { guestId },
+        });
+        const streakResult = calculateStreak(
+          profile?.lastActivityAt ?? null,
+          profile?.streakLastWonAt ?? null,
+          profile?.currentStreak ?? 0,
+          profile?.longestStreak ?? 0,
+        );
+
+        const coinsEarned = 1;
+        const isDailyChallenge = dailyChallengeDate != null;
+
+        await prisma.userProfile.upsert({
+          where: { guestId },
+          create: {
+            guestId,
+            currentStreak: streakResult.current,
+            longestStreak: streakResult.longest,
+            lastActivityAt: streakResult.lastActivityAt,
+            streakLastWonAt: new Date(),
+            coins: isDailyChallenge ? coinsEarned + 10 : coinsEarned,
+          },
+          update: {
+            currentStreak: streakResult.current,
+            longestStreak: streakResult.longest,
+            lastActivityAt: streakResult.lastActivityAt,
+            streakLastWonAt: streakResult.wonToday ? undefined : new Date(),
+            coins: { increment: isDailyChallenge ? coinsEarned + 10 : coinsEarned },
+          },
+        });
+      })()
+    : Promise.resolve();
+
+  // Wait for both operations to complete
+  await Promise.all([problemStatePromise, profilePromise]);
+
+  if (aiFailed) {
+    console.warn(
+      `Background feedback for session ${sessionId} used fallback values due to AI failure`,
+    );
   }
 }
 

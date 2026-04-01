@@ -43,7 +43,7 @@ export default function DashboardPage() {
       const params = new URLSearchParams();
       if (user) params.set('userId', user.id);
 
-      const res = await fetch(`/api/progress?${params.toString()}`);
+      const res = await fetch(`/api/progress?${params.toString()}`, { cache: 'no-store' });
       if (res.ok) {
         const data = await res.json();
         setStats(data.stats);

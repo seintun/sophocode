@@ -18,6 +18,7 @@ const mockProblems = [
     pattern: 'ARRAYS_STRINGS',
     testCaseCount: 3,
     mastery: null,
+    sessionStatus: null,
   },
   {
     id: '2',
@@ -27,6 +28,7 @@ const mockProblems = [
     pattern: 'SLIDING_WINDOW',
     testCaseCount: 5,
     mastery: null,
+    sessionStatus: null,
   },
 ];
 
@@ -145,5 +147,26 @@ describe('ProblemList', () => {
     });
 
     expect(screen.getAllByText('Sliding Window').length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('requests personalized problems with no-store cache policy', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => mockProblems,
+    } as Response);
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ dailyChallenge: null }),
+    } as Response);
+
+    render(<ProblemList />);
+
+    await waitFor(() => {
+      expect(mockFetch).toHaveBeenCalled();
+    });
+
+    const firstCall = mockFetch.mock.calls[0];
+    expect(firstCall[0]).toContain('/api/problems?');
+    expect(firstCall[1]).toMatchObject({ cache: 'no-store' });
   });
 });

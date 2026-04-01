@@ -9,6 +9,7 @@ const styles: Record<string, string> = {
   HARD: 'bg-[var(--color-error)]/20 text-[var(--color-error)]',
   UNSEEN: 'bg-[var(--color-bg-elevated)] text-[var(--color-text-muted)]',
   IN_PROGRESS: 'bg-[var(--color-warning)]/20 text-[var(--color-warning)]',
+  ABANDONED: 'bg-[var(--color-error)]/20 text-[var(--color-error)]',
   MASTERED: 'bg-[var(--color-success)]/20 text-[var(--color-success)]',
   NEEDS_REFRESH: 'bg-[var(--color-error)]/20 text-[var(--color-error)]',
   SOLVED: 'bg-[var(--color-success)]/20 text-[var(--color-success)]',
