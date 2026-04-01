@@ -184,9 +184,17 @@ export default function ProgressPage() {
                           </td>
                           <td className="py-2 pr-4">
                             {item.sessionStatus === 'ACTIVE' ? (
-                              <Badge variant="mastery" value="IN_PROGRESS" />
+                              item.latestSessionId ? (
+                                <Link href={`/session/${item.latestSessionId}`}>
+                                  <Badge variant="mastery" value="IN_PROGRESS" />
+                                </Link>
+                              ) : (
+                                <Badge variant="mastery" value="IN_PROGRESS" />
+                              )
                             ) : item.sessionStatus === 'ABANDONED' ? (
-                              <Badge variant="mastery" value="ABANDONED" />
+                              <Link href={`/practice/${item.problem.slug}`}>
+                                <Badge variant="mastery" value="ABANDONED" />
+                              </Link>
                             ) : item.latestCompletedSessionId ? (
                               <Link href={`/session/${item.latestCompletedSessionId}/summary`}>
                                 <Badge variant="mastery" value="MASTERED">

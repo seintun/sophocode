@@ -14,6 +14,7 @@ import type { SessionMode } from '@/generated/prisma/enums';
 
 interface SummaryData {
   id: string;
+  status: 'COMPLETED' | 'ABANDONED';
   problemId: string;
   problem: {
     title: string;
@@ -65,7 +66,7 @@ export default function SessionSummaryPage() {
         }
         const sessionData = await res.json();
 
-        if (sessionData.status !== 'COMPLETED') {
+        if (sessionData.status !== 'COMPLETED' && sessionData.status !== 'ABANDONED') {
           router.replace(`/session/${sessionId}`);
           return;
         }
@@ -82,8 +83,8 @@ export default function SessionSummaryPage() {
   }, [sessionId, router]);
 
   useEffect(() => {
-    // Only poll when session data is loaded, feedback is still null, and not timed out
-    if (!data || data.feedback !== null || feedbackTimeout) {
+    // Only poll completed sessions while feedback is pending.
+    if (!data || data.status !== 'COMPLETED' || data.feedback !== null || feedbackTimeout) {
       return;
     }
 
@@ -153,6 +154,7 @@ export default function SessionSummaryPage() {
   const endTime = data.completedAt ? new Date(data.completedAt).getTime() : Date.now();
   const timeSpentSeconds = Math.floor((endTime - startTime) / 1000);
   const timeMinutes = Math.round(timeSpentSeconds / 60);
+  const isAbandoned = data.status === 'ABANDONED';
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-8 animate-in fade-in slide-in-from-bottom-6 duration-1000">
@@ -166,7 +168,7 @@ export default function SessionSummaryPage() {
           ></div>
           <div className="relative">
             <h1 className="text-4xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-[var(--color-text-primary)] via-[var(--color-text-primary)] to-[var(--color-text-secondary)]">
-              Session Complete
+              {isAbandoned ? 'Session ended' : 'Session Complete'}
             </h1>
             <p className="mt-2 text-base text-[var(--color-text-secondary)] font-medium flex items-center gap-2">
               <span className="h-1 w-1 rounded-full bg-[var(--color-accent)] animate-pulse" />
@@ -258,7 +260,16 @@ export default function SessionSummaryPage() {
           </div>
         </div>
 
-        {data.feedback ? (
+        {isAbandoned ? (
+          <Card className="p-5">
+            <h4 className="mb-2 text-base font-semibold text-[var(--color-text-primary)]">
+              Session ended
+            </h4>
+            <p className="text-sm text-[var(--color-text-secondary)]">
+              AI feedback is only generated for completed sessions.
+            </p>
+          </Card>
+        ) : data.feedback ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Card
               className="p-5 border-l-4 transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-[var(--color-accent)]/5 group animate-in slide-in-from-bottom-2 fade-in fill-mode-both delay-[100ms] duration-700"
