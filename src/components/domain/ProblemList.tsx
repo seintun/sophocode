@@ -123,16 +123,16 @@ export default function ProblemList() {
   const alreadySolved = dailyMastery === 'MASTERED' || dailyMastery === 'NEEDS_REFRESH';
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-8">
+    <div className="mx-auto max-w-4xl px-4 py-5 sm:py-8">
       {dailyChallenge && (
         <DailyChallengeBanner dailyChallenge={dailyChallenge} alreadySolved={alreadySolved} />
       )}
-      <h1 className="mb-6 text-2xl font-bold text-[var(--color-text-primary)]">
+      <h1 className="mb-4 text-2xl font-bold text-[var(--color-text-primary)] sm:mb-6">
         Practice Problems
       </h1>
 
-      <div className="mb-6 flex flex-wrap items-center gap-3">
-        <div className="min-w-[200px] flex-1">
+      <div className="mb-4 space-y-2 sm:mb-6 sm:flex sm:flex-wrap sm:items-center sm:gap-3 sm:space-y-0">
+        <div className="min-w-0 sm:min-w-[200px] sm:flex-1">
           <label htmlFor="problem-search" className="sr-only">
             Search problems
           </label>
@@ -145,32 +145,34 @@ export default function ProblemList() {
             aria-label="Search problems"
           />
         </div>
-        <label htmlFor="pattern-filter" className="sr-only">
-          Filter by pattern
-        </label>
-        <Select
-          id="pattern-filter"
-          options={PATTERN_OPTIONS}
-          value={pattern}
-          onChange={(v) => setPattern(v)}
-          className="w-44"
-          aria-label="Filter by pattern"
-        />
-        <label htmlFor="sort-select" className="sr-only">
-          Sort problems
-        </label>
-        <Select
-          id="sort-select"
-          options={SORT_OPTIONS}
-          value={sortBy}
-          onChange={setSortBy}
-          className="w-36"
-          aria-label="Sort problems"
-        />
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center sm:gap-3">
+          <label htmlFor="pattern-filter" className="sr-only">
+            Filter by pattern
+          </label>
+          <Select
+            id="pattern-filter"
+            options={PATTERN_OPTIONS}
+            value={pattern}
+            onChange={(v) => setPattern(v)}
+            className="w-full sm:w-44"
+            aria-label="Filter by pattern"
+          />
+          <label htmlFor="sort-select" className="sr-only">
+            Sort problems
+          </label>
+          <Select
+            id="sort-select"
+            options={SORT_OPTIONS}
+            value={sortBy}
+            onChange={setSortBy}
+            className="w-full sm:w-36"
+            aria-label="Sort problems"
+          />
+        </div>
       </div>
 
       <div
-        className="mb-6 flex gap-2"
+        className="mb-4 flex flex-wrap gap-2 sm:mb-6"
         role="radiogroup"
         aria-label="Filter by difficulty"
         onKeyDown={(e) => {
@@ -193,7 +195,7 @@ export default function ProblemList() {
             onClick={() => setDifficultyFilter(difficultyFilter === d ? '' : d)}
             aria-checked={difficultyFilter === d}
             aria-label={`Filter by ${d.toLowerCase()} difficulty`}
-            className="cursor-pointer rounded-full transition-opacity min-h-11"
+            className="min-h-10 cursor-pointer rounded-full transition-opacity"
             style={{ opacity: difficultyFilter === d || !difficultyFilter ? 1 : 0.4 }}
           >
             <Badge
@@ -233,19 +235,19 @@ export default function ProblemList() {
           </Button>
         </div>
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-1.5 sm:space-y-2">
           {sorted.map((problem) => (
             <Link key={problem.id} href={`/practice/${problem.slug}`} className="block">
-              <Card className="flex items-center gap-4 transition-colors hover:bg-[var(--color-bg-elevated)]">
+              <Card className="flex flex-col items-start gap-2 p-3 transition-colors hover:bg-[var(--color-bg-elevated)] sm:flex-row sm:items-center sm:gap-4 sm:p-4">
                 <div className="min-w-0 flex-1">
-                  <p className="truncate font-medium text-[var(--color-text-primary)]">
+                  <p className="break-words text-base font-medium leading-snug text-[var(--color-text-primary)] sm:truncate">
                     {problem.title}
                   </p>
-                  <p className="text-sm text-[var(--color-text-muted)]">
+                  <p className="text-xs text-[var(--color-text-muted)] sm:text-sm">
                     {problem.testCaseCount} test cases
                   </p>
                 </div>
-                <div className="flex shrink-0 items-center gap-2">
+                <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:shrink-0 sm:flex-nowrap">
                   <Badge variant="pattern" value={formatPattern(problem.pattern)} />
                   <Badge
                     variant="difficulty"

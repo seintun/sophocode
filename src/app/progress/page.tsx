@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import dynamic from 'next/dynamic';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
@@ -65,27 +66,56 @@ interface ProgressData {
 export default function ProgressPage() {
   const [data, setData] = useState<ProgressData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [resetting, setResetting] = useState(false);
+
+  const fetchProgress = async () => {
+    try {
+      const res = await fetch('/api/progress', { cache: 'no-store' });
+      if (!res.ok) throw new Error('Failed to load progress');
+      const json = await res.json();
+      setData(json);
+    } catch {
+      setData(null);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    async function fetchProgress() {
-      try {
-        const res = await fetch('/api/progress', { cache: 'no-store' });
-        if (!res.ok) throw new Error('Failed to load progress');
-        const json = await res.json();
-        setData(json);
-      } catch {
-        setData(null);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchProgress();
+    void fetchProgress();
   }, []);
+
+  const handleResetProgress = async () => {
+    setResetting(true);
+    try {
+      await fetch('/api/progress', {
+        method: 'DELETE',
+        cache: 'no-store',
+      });
+      setShowResetConfirm(false);
+      setLoading(true);
+      await fetchProgress();
+    } finally {
+      setResetting(false);
+    }
+  };
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8">
-      <h1 className="mb-6 text-2xl font-bold text-[var(--color-text-primary)]">Progress</h1>
+      <div className="mb-6 flex items-center justify-between gap-3">
+        <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">Progress</h1>
+        {!loading && data && (
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setShowResetConfirm(true)}
+            className="border-[var(--color-error)] text-[var(--color-error)] hover:bg-[var(--color-error)] hover:text-white"
+          >
+            Reset Progress
+          </Button>
+        )}
+      </div>
 
       <ErrorBoundary>
         {loading ? (
@@ -223,6 +253,19 @@ export default function ProgressPage() {
           </div>
         )}
       </ErrorBoundary>
+
+      <ConfirmDialog
+        isOpen={showResetConfirm}
+        title="Reset all progress?"
+        message="This will permanently clear your problem history, mastery states, and streak progress. This action cannot be undone."
+        confirmLabel={resetting ? 'Resetting...' : 'Yes, Reset Progress'}
+        cancelLabel="Cancel"
+        confirmVariant="danger"
+        onConfirm={handleResetProgress}
+        onCancel={() => {
+          if (!resetting) setShowResetConfirm(false);
+        }}
+      />
     </div>
   );
 }

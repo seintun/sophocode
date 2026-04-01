@@ -1,4 +1,5 @@
 import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import ProgressPage from '../page';
 
@@ -83,6 +84,25 @@ describe('ProgressPage', () => {
 
     await waitFor(() => {
       expect(global.fetch).toHaveBeenCalledWith('/api/progress', { cache: 'no-store' });
+    });
+  });
+
+  it('shows confirm dialog and calls reset progress API', async () => {
+    const user = userEvent.setup();
+    render(<ProgressPage />);
+
+    await screen.findByText('Problem History');
+
+    await user.click(screen.getByRole('button', { name: 'Reset Progress' }));
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Yes, Reset Progress' }));
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith('/api/progress', {
+        method: 'DELETE',
+        cache: 'no-store',
+      });
     });
   });
 });

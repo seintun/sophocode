@@ -224,4 +224,40 @@ async function handler(_request: NextRequest): Promise<Response> {
   }
 }
 
+async function resetHandler(_request: NextRequest): Promise<Response> {
+  try {
+    const cookieStore = await cookies();
+    const guestId = getGuestIdFromCookie(cookieStore);
+
+    if (!guestId) {
+      return NextResponse.json({ error: 'Unauthorized: Guest ID missing' }, { status: 401 });
+    }
+
+    const now = new Date();
+    const [deletedSessions, deletedProblemStates, updatedProfile] = await prisma.$transaction([
+      prisma.session.deleteMany({ where: { guestId } }),
+      prisma.userProblemState.deleteMany({ where: { guestId } }),
+      prisma.userProfile.updateMany({
+        where: { guestId },
+        data: {
+          currentStreak: 0,
+          longestStreak: 0,
+          streakLastWonAt: null,
+          lastActivityAt: now,
+        },
+      }),
+    ]);
+
+    return NextResponse.json({
+      deletedSessions: deletedSessions.count,
+      deletedProblemStates: deletedProblemStates.count,
+      updatedProfile: updatedProfile.count,
+    });
+  } catch (error) {
+    console.error('Failed to reset progress:', error);
+    return NextResponse.json({ error: 'Failed to reset progress' }, { status: 500 });
+  }
+}
+
 export const GET = withErrorHandling(handler);
+export const DELETE = withErrorHandling(resetHandler);
