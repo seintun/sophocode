@@ -65,12 +65,16 @@ describe('SessionSummaryPage status handling', () => {
     expect(
       screen.getByText('AI feedback is only generated for completed sessions.'),
     ).toBeInTheDocument();
+
+    expect(screen.getByText('12m')).toBeInTheDocument();
+    expect(screen.getByText('1')).toBeInTheDocument();
+    expect(screen.getByText('40%')).toBeInTheDocument();
     expect(mockReplace).not.toHaveBeenCalled();
   });
 
   it('redirects to active session when summary is requested before completion', async () => {
     global.fetch = vi.fn(async () =>
-      createResponse({ ...baseSession, status: 'ACTIVE' }),
+      createResponse({ ...baseSession, status: 'IN_PROGRESS' }),
     ) as typeof fetch;
 
     render(<SessionSummaryPage />);

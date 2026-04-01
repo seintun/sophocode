@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -137,41 +137,51 @@ function ProblemDetailContent({
   const [loadingActive, setLoadingActive] = useState(true);
   const { prewarmWorker } = useCodeExecution();
 
+  const refreshSessionState = useCallback(async () => {
+    try {
+      try {
+        await fetch('/api/sessions/cleanup', {
+          method: 'POST',
+          cache: 'no-store',
+        });
+      } catch (cleanupError) {
+        console.error('Failed to cleanup expired sessions:', cleanupError);
+      }
+
+      const res = await fetch(`/api/sessions?problemId=${problem.id}&includeAbandoned=true`, {
+        cache: 'no-store',
+      });
+
+      if (!res.ok) {
+        return;
+      }
+
+      const data = await res.json();
+      if (data.session) {
+        setActiveSession(data.session);
+        setAbandonedSession(null);
+      } else {
+        setActiveSession(null);
+        setAbandonedSession(data.abandonedSession ?? null);
+      }
+    } catch (err) {
+      console.error('Failed to check active session:', err);
+    }
+  }, [problem.id]);
+
   useEffect(() => {
     prewarmWorker();
 
     // Check for active session
     const checkActive = async () => {
       try {
-        try {
-          await fetch('/api/sessions/cleanup', {
-            method: 'POST',
-            cache: 'no-store',
-          });
-        } catch (cleanupError) {
-          console.error('Failed to cleanup expired sessions:', cleanupError);
-        }
-
-        const res = await fetch(`/api/sessions?problemId=${problem.id}&includeAbandoned=true`, {
-          cache: 'no-store',
-        });
-        if (res.ok) {
-          const data = await res.json();
-          if (data.session) {
-            setActiveSession(data.session);
-            setAbandonedSession(null);
-          } else {
-            setAbandonedSession(data.abandonedSession ?? null);
-          }
-        }
-      } catch (err) {
-        console.error('Failed to check active session:', err);
+        await refreshSessionState();
       } finally {
         setLoadingActive(false);
       }
     };
     checkActive();
-  }, [prewarmWorker, problem.id]);
+  }, [prewarmWorker, refreshSessionState]);
 
   // Handle countdown for active session (must be at top level)
   const [timeLeft, setTimeLeft] = useState<string>('');
@@ -191,13 +201,14 @@ function ProblemDetailContent({
       setTimeLeft(`${mins}:${secs.toString().padStart(2, '0')}`);
       if (remaining <= 0) {
         setActiveSession(null);
+        void refreshSessionState();
       }
     };
 
     updateTime();
     const interval = setInterval(updateTime, 1000);
     return () => clearInterval(interval);
-  }, [activeSession?.expiresAt]);
+  }, [activeSession?.expiresAt, refreshSessionState]);
 
   const handleStartSession = async () => {
     setStarting(true);
@@ -242,7 +253,7 @@ function ProblemDetailContent({
         }),
       });
       if (res.ok) {
-        setActiveSession(null);
+        await refreshSessionState();
       }
     } catch (err) {
       console.error('Failed to end session:', err);

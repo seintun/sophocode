@@ -197,7 +197,7 @@ export default function ProgressPage() {
                               </Link>
                             ) : item.latestCompletedSessionId ? (
                               <Link href={`/session/${item.latestCompletedSessionId}/summary`}>
-                                <Badge variant="mastery" value="MASTERED">
+                                <Badge variant="mastery" value={item.mastery}>
                                   VIEW SUMMARY
                                 </Badge>
                               </Link>
