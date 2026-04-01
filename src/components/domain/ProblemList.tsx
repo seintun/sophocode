@@ -19,6 +19,7 @@ interface ProblemItem {
   pattern: Pattern;
   testCaseCount: number;
   mastery: MasteryState | null;
+  sessionStatus: 'ACTIVE' | 'ABANDONED' | null;
 }
 
 interface DailyChallenge {
@@ -256,7 +257,13 @@ export default function ProblemList() {
                           : 'EASY'
                     }
                   />
-                  {problem.mastery && <Badge variant="mastery" value={problem.mastery} />}
+                  {problem.sessionStatus === 'ACTIVE' ? (
+                    <Badge variant="mastery" value="IN_PROGRESS" />
+                  ) : problem.sessionStatus === 'ABANDONED' ? (
+                    <Badge variant="mastery" value="ABANDONED" />
+                  ) : (
+                    problem.mastery && <Badge variant="mastery" value={problem.mastery} />
+                  )}
                 </div>
               </Card>
             </Link>

@@ -24,6 +24,9 @@ interface ProblemHistoryItem {
   attemptCount: number;
   solveCount: number;
   lastAttemptedAt: string | null;
+  latestSessionId: string | null;
+  latestCompletedSessionId: string | null;
+  sessionStatus: 'ACTIVE' | 'COMPLETED' | 'ABANDONED' | null;
   problem: {
     id: string;
     title: string;
@@ -180,7 +183,19 @@ export default function ProgressPage() {
                             />
                           </td>
                           <td className="py-2 pr-4">
-                            <Badge variant="mastery" value={item.mastery} />
+                            {item.sessionStatus === 'ACTIVE' ? (
+                              <Badge variant="mastery" value="IN_PROGRESS" />
+                            ) : item.sessionStatus === 'ABANDONED' ? (
+                              <Badge variant="mastery" value="ABANDONED" />
+                            ) : item.latestCompletedSessionId ? (
+                              <Link href={`/session/${item.latestCompletedSessionId}/summary`}>
+                                <Badge variant="mastery" value="MASTERED">
+                                  VIEW SUMMARY
+                                </Badge>
+                              </Link>
+                            ) : (
+                              <Badge variant="mastery" value={item.mastery} />
+                            )}
                           </td>
                           <td className="py-2 pr-4 text-[var(--color-text-secondary)]">
                             {item.solveCount}/{item.attemptCount} solved

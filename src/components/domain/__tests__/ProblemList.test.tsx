@@ -18,6 +18,7 @@ const mockProblems = [
     pattern: 'ARRAYS_STRINGS',
     testCaseCount: 3,
     mastery: null,
+    sessionStatus: null,
   },
   {
     id: '2',
@@ -27,6 +28,7 @@ const mockProblems = [
     pattern: 'SLIDING_WINDOW',
     testCaseCount: 5,
     mastery: null,
+    sessionStatus: null,
   },
 ];
 
