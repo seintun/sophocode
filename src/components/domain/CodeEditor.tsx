@@ -217,6 +217,7 @@ export function CodeEditor({
         beforeMount={handleEditorWillMount}
         onMount={handleEditorDidMount}
         options={options}
+        loading={<Skeleton className="h-full w-full" />}
       />
     </div>
   );
