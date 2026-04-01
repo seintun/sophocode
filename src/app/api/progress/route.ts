@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db/prisma';
 import { withErrorHandling } from '@/lib/errors/api';
 import { getGuestIdFromCookie } from '@/lib/guest';
 import { cookies } from 'next/headers';
+import { cleanupExpiredSessions } from '@/lib/session/expiry';
 
 async function handler(_request: NextRequest): Promise<Response> {
   try {
@@ -13,66 +14,51 @@ async function handler(_request: NextRequest): Promise<Response> {
       return NextResponse.json({ error: 'Unauthorized: Guest ID missing' }, { status: 401 });
     }
 
+    await cleanupExpiredSessions(guestId);
+
     const now = new Date();
     const weekAgo = new Date(now);
     weekAgo.setDate(weekAgo.getDate() - 7);
 
-    const [
-      totalSolved,
-      patternsPracticed,
-      sessionsThisWeek,
-      recentSessions,
-      needsRefresh,
-      inProgressProblems,
-    ] = await Promise.all([
-      prisma.userProblemState.count({
-        where: { guestId, solveCount: { gt: 0 } },
-      }),
-      prisma.userProblemState
-        .findMany({
-          where: { guestId, attemptCount: { gt: 0 } },
-          select: { problem: { select: { pattern: true } } },
-          distinct: ['problemId'],
-        })
-        .then((rows) => new Set(rows.map((r) => r.problem.pattern)).size),
-      prisma.session.count({
-        where: { guestId, startedAt: { gte: weekAgo } },
-      }),
-      prisma.session.findMany({
-        where: { guestId },
-        orderBy: { startedAt: 'desc' },
-        take: 5,
-        select: {
-          id: true,
-          outcome: true,
-          startedAt: true,
-          completedAt: true,
-          problem: { select: { title: true, slug: true, pattern: true, difficulty: true } },
-        },
-      }),
-      prisma.userProblemState.findMany({
-        where: { guestId, mastery: 'NEEDS_REFRESH' },
-        take: 5,
-        select: {
-          problem: {
-            select: { id: true, title: true, slug: true, pattern: true, difficulty: true },
+    const [totalSolved, patternsPracticed, sessionsThisWeek, recentSessions, needsRefresh] =
+      await Promise.all([
+        prisma.userProblemState.count({
+          where: { guestId, solveCount: { gt: 0 } },
+        }),
+        prisma.userProblemState
+          .findMany({
+            where: { guestId, attemptCount: { gt: 0 } },
+            select: { problem: { select: { pattern: true } } },
+            distinct: ['problemId'],
+          })
+          .then((rows) => new Set(rows.map((r) => r.problem.pattern)).size),
+        prisma.session.count({
+          where: { guestId, startedAt: { gte: weekAgo } },
+        }),
+        prisma.session.findMany({
+          where: { guestId },
+          orderBy: { startedAt: 'desc' },
+          take: 5,
+          select: {
+            id: true,
+            outcome: true,
+            startedAt: true,
+            completedAt: true,
+            problem: { select: { title: true, slug: true, pattern: true, difficulty: true } },
           },
-          nextReviewAt: true,
-        },
-        orderBy: { nextReviewAt: 'asc' },
-      }),
-      prisma.userProblemState.findMany({
-        where: { guestId, mastery: 'IN_PROGRESS' },
-        take: 3,
-        select: {
-          problem: {
-            select: { id: true, title: true, slug: true, pattern: true, difficulty: true },
+        }),
+        prisma.userProblemState.findMany({
+          where: { guestId, mastery: 'NEEDS_REFRESH' },
+          take: 5,
+          select: {
+            problem: {
+              select: { id: true, title: true, slug: true, pattern: true, difficulty: true },
+            },
+            nextReviewAt: true,
           },
-          attemptCount: true,
-        },
-        orderBy: { lastAttemptedAt: 'desc' },
-      }),
-    ]);
+          orderBy: { nextReviewAt: 'asc' },
+        }),
+      ]);
 
     const [allAttempted, problemHistory] = await Promise.all([
       prisma.userProblemState.findMany({
@@ -94,6 +80,81 @@ async function handler(_request: NextRequest): Promise<Response> {
         },
       }),
     ]);
+
+    const historyProblemIds = Array.from(new Set(problemHistory.map((item) => item.problem.id)));
+    const historySessions =
+      historyProblemIds.length > 0
+        ? await prisma.session.findMany({
+            where: {
+              guestId,
+              problemId: { in: historyProblemIds },
+            },
+            orderBy: { startedAt: 'desc' },
+            select: {
+              id: true,
+              problemId: true,
+              status: true,
+              expiresAt: true,
+            },
+          })
+        : [];
+
+    const latestSessionMeta = new Map<
+      string,
+      {
+        latestSessionId: string | null;
+        latestCompletedSessionId: string | null;
+        sessionStatus: 'ACTIVE' | 'COMPLETED' | 'ABANDONED' | null;
+      }
+    >();
+
+    for (const session of historySessions) {
+      if (!latestSessionMeta.has(session.problemId)) {
+        let sessionStatus: 'ACTIVE' | 'COMPLETED' | 'ABANDONED' | null = null;
+        if (session.status === 'COMPLETED') {
+          sessionStatus = 'COMPLETED';
+        } else if (session.status === 'ABANDONED') {
+          sessionStatus = 'ABANDONED';
+        } else if (
+          session.status === 'IN_PROGRESS' &&
+          (session.expiresAt == null || session.expiresAt.getTime() > now.getTime())
+        ) {
+          sessionStatus = 'ACTIVE';
+        } else if (session.status === 'IN_PROGRESS') {
+          sessionStatus = 'ABANDONED';
+        }
+
+        latestSessionMeta.set(session.problemId, {
+          latestSessionId: session.id,
+          latestCompletedSessionId: session.status === 'COMPLETED' ? session.id : null,
+          sessionStatus,
+        });
+      }
+
+      const meta = latestSessionMeta.get(session.problemId);
+      if (meta && meta.latestCompletedSessionId == null && session.status === 'COMPLETED') {
+        meta.latestCompletedSessionId = session.id;
+      }
+    }
+
+    const problemHistoryWithSessionMeta = problemHistory.map((item) => {
+      const meta = latestSessionMeta.get(item.problem.id);
+      return {
+        ...item,
+        latestSessionId: meta?.latestSessionId ?? null,
+        latestCompletedSessionId: meta?.latestCompletedSessionId ?? null,
+        sessionStatus: meta?.sessionStatus ?? null,
+      };
+    });
+
+    const inProgressProblems = problemHistoryWithSessionMeta
+      .filter((item) => item.sessionStatus === 'ACTIVE')
+      .slice(0, 3)
+      .map((item) => ({
+        problem: item.problem,
+        attemptCount: item.attemptCount,
+      }));
+
     const attemptedIds = new Set(allAttempted.map((s) => s.problemId));
 
     const recommendedProblem = await prisma.problem.findFirst({
@@ -114,14 +175,17 @@ async function handler(_request: NextRequest): Promise<Response> {
     }
 
     const patternStats = Array.from(problemsByPattern.entries()).map(([pattern, total]) => {
-      const states = problemHistory.filter((h) => h.problem.pattern === pattern);
+      const states = problemHistoryWithSessionMeta.filter((h) => h.problem.pattern === pattern);
+      const mastered = states.filter((s) => s.mastery === 'MASTERED').length;
+      const inProgress = states.filter((s) => s.sessionStatus === 'ACTIVE').length;
+      const needsRefresh = states.filter((s) => s.mastery === 'NEEDS_REFRESH').length;
       return {
         pattern,
         total,
-        mastered: states.filter((s) => s.mastery === 'MASTERED').length,
-        inProgress: states.filter((s) => s.mastery === 'IN_PROGRESS').length,
-        needsRefresh: states.filter((s) => s.mastery === 'NEEDS_REFRESH').length,
-        unseen: total - states.length,
+        mastered,
+        inProgress,
+        needsRefresh,
+        unseen: Math.max(total - mastered - inProgress - needsRefresh, 0),
       };
     });
 
@@ -137,7 +201,7 @@ async function handler(_request: NextRequest): Promise<Response> {
         inProgressProblems,
         recommendedProblem,
         patternStats,
-        problemHistory,
+        problemHistory: problemHistoryWithSessionMeta,
       },
       {
         headers: {

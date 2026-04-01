@@ -4,6 +4,7 @@ import type { Pattern, Difficulty } from '@/generated/prisma/enums';
 import { handleApiError } from '@/lib/errors/api';
 import { getGuestIdFromCookie } from '@/lib/guest';
 import { cookies } from 'next/headers';
+import { cleanupExpiredSessions } from '@/lib/session/expiry';
 
 export async function GET(request: NextRequest): Promise<Response> {
   try {
@@ -47,14 +48,58 @@ export async function GET(request: NextRequest): Promise<Response> {
     });
 
     let masteryMap: Record<string, string> = {};
+    const sessionStatusMap: Record<string, 'ACTIVE' | 'ABANDONED' | null> = {};
     if (guestId) {
+      await cleanupExpiredSessions(guestId);
+
       const states = await prisma.userProblemState.findMany({
         where: { guestId },
         select: { problemId: true, mastery: true },
       });
+
+      const latestSessions = await prisma.session.findMany({
+        where: {
+          guestId,
+          problemId: { in: problems.map((problem) => problem.id) },
+        },
+        orderBy: { startedAt: 'desc' },
+        select: {
+          problemId: true,
+          status: true,
+          expiresAt: true,
+        },
+      });
+
       masteryMap = Object.fromEntries(
         states.map((s: { problemId: string; mastery: string }) => [s.problemId, s.mastery]),
       );
+
+      const now = Date.now();
+      for (const session of latestSessions) {
+        if (sessionStatusMap[session.problemId] !== undefined) {
+          continue;
+        }
+
+        if (
+          session.status === 'IN_PROGRESS' &&
+          (session.expiresAt == null || session.expiresAt.getTime() > now)
+        ) {
+          sessionStatusMap[session.problemId] = 'ACTIVE';
+          continue;
+        }
+
+        if (
+          session.status === 'ABANDONED' ||
+          (session.status === 'IN_PROGRESS' &&
+            session.expiresAt != null &&
+            session.expiresAt.getTime() <= now)
+        ) {
+          sessionStatusMap[session.problemId] = 'ABANDONED';
+          continue;
+        }
+
+        sessionStatusMap[session.problemId] = null;
+      }
     }
 
     const result = problems.map((p: (typeof problems)[number]) => ({
@@ -66,6 +111,7 @@ export async function GET(request: NextRequest): Promise<Response> {
       curatedOrder: p.curatedOrder,
       testCaseCount: p._count.testCases,
       mastery: masteryMap[p.id] ?? null,
+      sessionStatus: sessionStatusMap[p.id] ?? null,
     }));
 
     return NextResponse.json(result, {
