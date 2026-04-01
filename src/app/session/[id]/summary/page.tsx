@@ -476,7 +476,7 @@ export default function SessionSummaryPage() {
 
       <div className="flex flex-col sm:flex-row gap-3 mt-8 pb-12">
         <Button variant="secondary" className="flex-1" onClick={() => setShowReportModal(true)}>
-          View Editable Report
+          View Session Report
         </Button>
         <Link href={`/practice/${data.problem.slug}`} className="flex-1">
           <Button variant="primary" className="w-full">

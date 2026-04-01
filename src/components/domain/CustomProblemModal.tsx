@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Button } from '@/components/ui/Button';
+import { PREMIUM_GATING_ENABLED } from '@/lib/feature-flags';
 
 interface CustomProblemModalProps {
   open: boolean;
@@ -39,6 +40,7 @@ const PATTERNS = [
 ] as const;
 
 export function CustomProblemModal({ open, onClose, isPremium }: CustomProblemModalProps) {
+  const canUseFeature = !PREMIUM_GATING_ENABLED || isPremium;
   const [pattern, setPattern] = useState<(typeof PATTERNS)[number]>('SLIDING_WINDOW');
   const [difficulty, setDifficulty] = useState<'EASY' | 'MEDIUM' | 'HARD'>('MEDIUM');
   const [loading, setLoading] = useState(false);
@@ -48,7 +50,7 @@ export function CustomProblemModal({ open, onClose, isPremium }: CustomProblemMo
   if (!open) return null;
 
   const generate = async () => {
-    if (!isPremium) return;
+    if (!canUseFeature) return;
     setLoading(true);
     setError(null);
     try {
@@ -79,7 +81,7 @@ export function CustomProblemModal({ open, onClose, isPremium }: CustomProblemMo
           </button>
         </div>
 
-        {!isPremium && (
+        {PREMIUM_GATING_ENABLED && !isPremium && (
           <p className="mb-4 text-sm text-[var(--color-warning)]">
             Premium required to generate custom problems.
           </p>
@@ -116,7 +118,7 @@ export function CustomProblemModal({ open, onClose, isPremium }: CustomProblemMo
         </div>
 
         <div className="mt-4 flex gap-2">
-          <Button onClick={generate} disabled={!isPremium || loading}>
+          <Button onClick={generate} disabled={!canUseFeature || loading}>
             {loading ? 'Generating...' : 'Generate'}
           </Button>
           {generated && (

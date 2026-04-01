@@ -19,9 +19,7 @@ interface SessionReport {
 export function SessionReportModal({ open, sessionId, onClose }: SessionReportModalProps) {
   const [report, setReport] = useState<SessionReport | null>(null);
   const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [saveMessage, setSaveMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open || !sessionId) return;
@@ -30,7 +28,6 @@ export function SessionReportModal({ open, sessionId, onClose }: SessionReportMo
     async function fetchReport() {
       setLoading(true);
       setError(null);
-      setSaveMessage(null);
       try {
         const res = await fetch(`/api/sessions/${sessionId}/report`, { cache: 'no-store' });
         const json = await res.json();
@@ -51,30 +48,6 @@ export function SessionReportModal({ open, sessionId, onClose }: SessionReportMo
 
   if (!open) return null;
 
-  async function handleSave() {
-    if (!report) return;
-    setSaving(true);
-    setError(null);
-    setSaveMessage(null);
-
-    try {
-      const res = await fetch(`/api/sessions/${sessionId}/report`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(report),
-      });
-      const json = await res.json();
-      if (!res.ok) {
-        throw new Error(json?.error ?? 'Failed to save report');
-      }
-      setSaveMessage('Saved');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save report');
-    } finally {
-      setSaving(false);
-    }
-  }
-
   return (
     <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/50 p-4">
       <div className="w-full max-w-2xl rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-elevated)] p-5">
@@ -87,40 +60,30 @@ export function SessionReportModal({ open, sessionId, onClose }: SessionReportMo
 
         {loading && <p className="text-sm text-[var(--color-text-muted)]">Generating report...</p>}
         {error && <p className="text-sm text-[var(--color-error)]">{error}</p>}
-        {saveMessage && <p className="text-sm text-green-500">{saveMessage}</p>}
 
         {report && (
           <div className="space-y-4 text-sm">
             <section>
               <h4 className="mb-1 font-semibold text-[var(--color-text-primary)]">Strengths</h4>
-              <textarea
-                value={report.strengths}
-                onChange={(e) => setReport({ ...report, strengths: e.target.value })}
-                className="min-h-24 w-full rounded-md border border-[var(--color-border)] bg-[var(--color-bg-primary)] p-2"
-              />
+              <p className="whitespace-pre-wrap rounded-md border border-[var(--color-border)] bg-[var(--color-bg-primary)] p-2">
+                {report.strengths || 'No strengths captured yet.'}
+              </p>
             </section>
             <section>
               <h4 className="mb-1 font-semibold text-[var(--color-text-primary)]">
                 Areas to Improve
               </h4>
-              <textarea
-                value={report.areasToImprove}
-                onChange={(e) => setReport({ ...report, areasToImprove: e.target.value })}
-                className="min-h-20 w-full rounded-md border border-[var(--color-border)] bg-[var(--color-bg-primary)] p-2"
-              />
+              <p className="whitespace-pre-wrap rounded-md border border-[var(--color-border)] bg-[var(--color-bg-primary)] p-2">
+                {report.areasToImprove || 'No improvement notes yet.'}
+              </p>
             </section>
             <section>
               <h4 className="mb-1 font-semibold text-[var(--color-text-primary)]">Next Steps</h4>
-              <textarea
-                value={report.nextSteps}
-                onChange={(e) => setReport({ ...report, nextSteps: e.target.value })}
-                className="min-h-20 w-full rounded-md border border-[var(--color-border)] bg-[var(--color-bg-primary)] p-2"
-              />
+              <p className="whitespace-pre-wrap rounded-md border border-[var(--color-border)] bg-[var(--color-bg-primary)] p-2">
+                {report.nextSteps || 'No next steps yet.'}
+              </p>
             </section>
             <div className="flex justify-end gap-2">
-              <Button onClick={handleSave} disabled={saving}>
-                {saving ? 'Saving...' : 'Save'}
-              </Button>
               <Button variant="secondary" onClick={onClose}>
                 Close
               </Button>

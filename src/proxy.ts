@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { updateSession } from '@/lib/supabase/middleware';
 import { generateGuestId, getGuestIdFromCookie } from '@/lib/guest';
+import { PREMIUM_GATING_ENABLED } from '@/lib/feature-flags';
 
 /**
  * Generate a cryptographically random nonce for CSP.
@@ -58,7 +59,7 @@ export async function proxy(request: NextRequest) {
     pathname.startsWith('/api/recommendations/next') ||
     /\/api\/sessions\/[^/]+\/report$/.test(pathname);
 
-  if (isPremiumRoute) {
+  if (PREMIUM_GATING_ENABLED && isPremiumRoute) {
     const guestId = getGuestIdFromCookie(request.cookies);
     if (!guestId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

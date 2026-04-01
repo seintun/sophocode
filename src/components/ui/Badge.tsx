@@ -10,7 +10,8 @@ const styles: Record<string, string> = {
   UNSEEN: 'bg-[var(--color-bg-elevated)] text-[var(--color-text-muted)]',
   IN_PROGRESS: 'bg-[var(--color-warning)]/20 text-[var(--color-warning)]',
   ABANDONED: 'bg-[var(--color-error)]/20 text-[var(--color-error)]',
-  MASTERED: 'bg-[var(--color-success)]/20 text-[var(--color-success)]',
+  MASTERED:
+    'border border-[var(--color-success)]/25 bg-[var(--color-success)]/10 text-[var(--color-success)]/90',
   NEEDS_REFRESH: 'bg-[var(--color-error)]/20 text-[var(--color-error)]',
   SOLVED: 'bg-[var(--color-success)]/20 text-[var(--color-success)]',
   PARTIALLY_SOLVED: 'bg-[var(--color-warning)]/20 text-[var(--color-warning)]',
@@ -32,16 +33,20 @@ export function Badge({ variant, value, className, children, ...rest }: BadgePro
   }
 
   const style = styles[styleKey] || styles.PATTERN;
-  const label = children || value.replace(/_/g, ' ');
+  const isSubtleMastered = variant === 'mastery' && value === 'MASTERED' && !children;
+  const label = children || (isSubtleMastered ? '✓' : value.replace(/_/g, ' '));
 
   return (
     <span
+      {...rest}
       className={cn(
         'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium whitespace-nowrap max-w-[180px] truncate',
+        isSubtleMastered && 'px-2 text-[11px] font-semibold',
         style,
         className,
       )}
-      {...rest}
+      title={isSubtleMastered ? 'Mastered' : rest.title}
+      aria-label={isSubtleMastered ? 'Mastered' : rest['aria-label']}
     >
       {label}
     </span>
