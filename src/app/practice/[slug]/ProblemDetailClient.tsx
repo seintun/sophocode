@@ -38,6 +38,13 @@ interface ProblemDetail {
 
 type SessionMode = 'SELF_PRACTICE' | 'COACH_ME' | 'MOCK_INTERVIEW';
 
+interface AbandonedSession {
+  id: string;
+  mode: SessionMode;
+  code: string | null;
+  startedAt: string;
+}
+
 const MODES: Array<{ id: SessionMode; title: string; description: string }> = [
   {
     id: 'SELF_PRACTICE',
@@ -124,6 +131,7 @@ function ProblemDetailContent({
     mode: SessionMode;
     expiresAt: string;
   } | null>(null);
+  const [abandonedSession, setAbandonedSession] = useState<AbandonedSession | null>(null);
   const [loadingActive, setLoadingActive] = useState(true);
   const { prewarmWorker } = useCodeExecution();
 
@@ -133,11 +141,16 @@ function ProblemDetailContent({
     // Check for active session
     const checkActive = async () => {
       try {
-        const res = await fetch(`/api/sessions?problemId=${problem.id}`);
+        const res = await fetch(`/api/sessions?problemId=${problem.id}&includeAbandoned=true`, {
+          cache: 'no-store',
+        });
         if (res.ok) {
           const data = await res.json();
           if (data.session) {
             setActiveSession(data.session);
+            setAbandonedSession(null);
+          } else {
+            setAbandonedSession(data.abandonedSession ?? null);
           }
         }
       } catch (err) {
@@ -205,6 +218,27 @@ function ProblemDetailContent({
       }
     } catch (err) {
       console.error('Failed to end session:', err);
+    }
+  };
+
+  const handleResumeAbandonedSession = async () => {
+    if (!abandonedSession) return;
+    setStarting(true);
+    try {
+      const res = await fetch('/api/sessions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          problemId: problem.id,
+          mode: abandonedSession.mode,
+          previousSessionId: abandonedSession.id,
+        }),
+      });
+      if (!res.ok) throw new Error('Failed to resume abandoned session');
+      const session = await res.json();
+      router.push(`/session/${session.id}`);
+    } catch {
+      setStarting(false);
     }
   };
 
@@ -382,11 +416,32 @@ function ProblemDetailContent({
         </div>
       </div>
 
-      <div className="flex justify-center">
-        <Button onClick={handleStartSession} disabled={starting} size="lg">
-          {starting ? 'Starting...' : 'Start Session'}
-        </Button>
-      </div>
+      {abandonedSession && (
+        <Card className="mb-8 p-6">
+          <h2 className="mb-2 text-lg font-semibold text-[var(--color-text-primary)]">
+            Previous Session Available
+          </h2>
+          <p className="mb-4 text-sm text-[var(--color-text-secondary)]">
+            You can resume your previous code from an abandoned session, or start fresh.
+          </p>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <Button onClick={handleResumeAbandonedSession} disabled={starting}>
+              {starting ? 'Starting...' : 'Resume with Previous Code'}
+            </Button>
+            <Button variant="secondary" onClick={handleStartSession} disabled={starting}>
+              Start Fresh
+            </Button>
+          </div>
+        </Card>
+      )}
+
+      {!abandonedSession && (
+        <div className="flex justify-center">
+          <Button onClick={handleStartSession} disabled={starting} size="lg">
+            {starting ? 'Starting...' : 'Start Session'}
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

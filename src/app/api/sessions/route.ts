@@ -10,7 +10,7 @@ async function handler(request: NextRequest, { guestId }: { guestId: string }): 
     if (!validation.success) {
       return NextResponse.json({ error: validation.error }, { status: 400 });
     }
-    const { problemId, mode } = validation.data;
+    const { problemId, mode, previousSessionId } = validation.data;
 
     if (!validateId(problemId)) {
       return NextResponse.json({ error: 'Invalid problemId format' }, { status: 400 });
@@ -41,6 +41,31 @@ async function handler(request: NextRequest, { guestId }: { guestId: string }): 
       );
     }
 
+    let previousSessionCode: string | undefined;
+    if (previousSessionId) {
+      if (!validateId(previousSessionId)) {
+        return NextResponse.json({ error: 'Invalid previousSessionId format' }, { status: 400 });
+      }
+
+      const previousSession = await prisma.session.findFirst({
+        where: {
+          id: previousSessionId,
+          guestId,
+          problemId,
+          status: 'ABANDONED',
+        },
+        select: {
+          code: true,
+        },
+      });
+
+      if (!previousSession) {
+        return NextResponse.json({ error: 'Invalid previousSessionId' }, { status: 400 });
+      }
+
+      previousSessionCode = previousSession.code ?? undefined;
+    }
+
     const duration = 45; // 45 minutes
     const expiresAt = new Date(Date.now() + duration * 60 * 1000);
 
@@ -49,6 +74,7 @@ async function handler(request: NextRequest, { guestId }: { guestId: string }): 
         guestId,
         problemId,
         mode,
+        code: previousSessionCode,
         duration,
         expiresAt,
       },
@@ -69,6 +95,7 @@ async function getHandler(
   try {
     const { searchParams } = new URL(request.url);
     const problemId = searchParams.get('problemId');
+    const includeAbandoned = searchParams.get('includeAbandoned') === 'true';
 
     if (!problemId) {
       return NextResponse.json({ error: 'Missing problemId parameter' }, { status: 400 });
@@ -93,7 +120,33 @@ async function getHandler(
       },
     });
 
-    return NextResponse.json({ session });
+    let abandonedSession: {
+      id: string;
+      mode: 'SELF_PRACTICE' | 'COACH_ME' | 'MOCK_INTERVIEW';
+      code: string | null;
+      startedAt: Date;
+    } | null = null;
+
+    if (!session && includeAbandoned) {
+      abandonedSession = await prisma.session.findFirst({
+        where: {
+          guestId,
+          problemId,
+          status: 'ABANDONED',
+        },
+        orderBy: {
+          startedAt: 'desc',
+        },
+        select: {
+          id: true,
+          mode: true,
+          code: true,
+          startedAt: true,
+        },
+      });
+    }
+
+    return NextResponse.json({ session, abandonedSession });
   } catch (error) {
     console.error('Failed to fetch active session:', error);
     return NextResponse.json({ error: 'Failed to fetch active session' }, { status: 500 });

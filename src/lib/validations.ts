@@ -58,6 +58,7 @@ export const guestIdSchema = z.object({
 export const sessionCreateSchema = z.object({
   problemId: z.string().min(1).max(100),
   mode: z.enum(['SELF_PRACTICE', 'COACH_ME', 'MOCK_INTERVIEW']),
+  previousSessionId: z.string().optional(),
 });
 
 // ── Explain Request ─────────────────────────────────────────────────────────
