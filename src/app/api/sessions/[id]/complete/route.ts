@@ -79,6 +79,7 @@ async function handler(
       hintsUsed,
       lastSolvedAt: existingState?.lastAttemptedAt,
     });
+    const nextReviewAt = computeNextReviewDate(nextMastery);
 
     // Mark session COMPLETED first
     const updatedSession = await prisma.session.update({
@@ -152,8 +153,6 @@ async function handler(
         });
 
         // Update user problem state
-        const nextReviewAt = computeNextReviewDate(nextMastery);
-
         await prisma.userProblemState.upsert({
           where: {
             guestId_problemId: {
