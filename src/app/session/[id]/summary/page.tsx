@@ -158,7 +158,12 @@ export default function SessionSummaryPage() {
     <div className="mx-auto max-w-3xl px-4 py-8 animate-in fade-in slide-in-from-bottom-6 duration-1000">
       <div className="mb-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="relative group">
-          <div className="absolute -inset-1 bg-gradient-to-r from-[var(--color-accent)] to-[var(--color-ai-coach)] rounded-lg blur opacity-15 group-hover:opacity-20 transition duration-1000"></div>
+          <div
+            className="absolute -inset-x-16 -inset-y-10 rounded-full blur-3xl opacity-25 group-hover:opacity-40 transition-opacity duration-1000"
+            style={{
+              background: `radial-gradient(circle at center, ${config.colors.primary}, transparent 70%)`,
+            }}
+          ></div>
           <div className="relative">
             <h1 className="text-4xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-[var(--color-text-primary)] via-[var(--color-text-primary)] to-[var(--color-text-secondary)]">
               Session Complete
