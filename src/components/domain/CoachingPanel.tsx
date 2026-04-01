@@ -21,8 +21,6 @@ interface CoachingPanelProps {
   onHintRequest: (level: number) => void;
   hintLevel: number;
   onClose?: () => void;
-  onViewSessionReport?: () => void;
-  showSessionReportButton?: boolean;
 }
 
 function extractTextFromMessage(msg: UIMessage): string {
@@ -45,8 +43,6 @@ export function CoachingPanel({
   onHintRequest,
   hintLevel,
   onClose,
-  onViewSessionReport,
-  showSessionReportButton,
 }: CoachingPanelProps) {
   const [input, setInput] = useState('');
   const [avatarError, setAvatarError] = useState(false);
@@ -455,17 +451,6 @@ export function CoachingPanel({
                   {isHintOnCooldown
                     ? `Next hint in ${Math.floor(cooldownRemaining / 60)}:${String(cooldownRemaining % 60).padStart(2, '0')}`
                     : `Request Level ${nextHintLevel} Hint`}
-                </button>
-              )}
-              {showSessionReportButton && onViewSessionReport && (
-                <button
-                  type="button"
-                  onClick={onViewSessionReport}
-                  disabled={isLoading}
-                  aria-label="View session report"
-                  className="error-cta-btn"
-                >
-                  View session report
                 </button>
               )}
             </div>

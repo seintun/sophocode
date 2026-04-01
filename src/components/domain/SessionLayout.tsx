@@ -89,6 +89,20 @@ export function SessionLayout({
     prevIsCoachOpen.current = isCoachOpen;
   }, [isCoachOpen]);
 
+  useEffect(() => {
+    const openCoach = () => {
+      if (!isCoachOpen) {
+        setIsCoachOpen(true);
+        onCoachToggle?.(true);
+      }
+    };
+
+    window.addEventListener('sophia:open-coach', openCoach);
+    return () => {
+      window.removeEventListener('sophia:open-coach', openCoach);
+    };
+  }, [isCoachOpen, onCoachToggle]);
+
   const handleMobileSheetChange = useCallback((isOpen: boolean) => {
     setIsMobileSheetOpen(isOpen);
   }, []);

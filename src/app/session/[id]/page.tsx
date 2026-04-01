@@ -18,7 +18,6 @@ import { useAIChat } from '@/hooks/useAIChat';
 import { useCodeExecution } from '@/hooks/useCodeExecution';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { Button } from '@/components/ui/Button';
-import { SessionReportModal } from '@/components/domain/SessionReportModal';
 import type { SessionMode, MessageRole } from '@/generated/prisma/enums';
 import type { MobileWorkspaceHandle } from '@/components/domain/MobileWorkspace';
 
@@ -182,7 +181,6 @@ function SessionContent({
   const [autoEndCountdown, setAutoEndCountdown] = useState(60);
   const [showEndConfirmation, setShowEndConfirmation] = useState(false);
   const [leaveDestination, setLeaveDestination] = useState<string | null>(null);
-  const [showSessionReportModal, setShowSessionReportModal] = useState(false);
   const { run: runTests, results: testRunResults, isRunning, prewarmWorker } = useCodeExecution();
   const isLeaveGuardActive = session.status === 'IN_PROGRESS' && !completing && !isExpired;
 
@@ -239,7 +237,7 @@ function SessionContent({
         throw new Error('Failed to complete session');
       }
 
-      router.push(`/session/${sessionId}/summary?report=1`);
+      router.push(`/session/${sessionId}/summary`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to end session');
       setCompleting(false);
@@ -526,6 +524,7 @@ function SessionContent({
 
   const handleAskAboutFailure = useCallback(
     (failedSummary: string) => {
+      window.dispatchEvent(new CustomEvent('sophia:open-coach'));
       workspaceRef.current?.openCoach();
       askAboutFailure(failedSummary);
     },
@@ -626,8 +625,6 @@ function SessionContent({
         hintStream={hintStream}
         onHintRequest={handleHintRequest}
         hintLevel={hintLevel}
-        onViewSessionReport={() => setShowSessionReportModal(true)}
-        showSessionReportButton={session.status === 'COMPLETED'}
       />
     ),
     [session.mode, messages, sendChat, aiLoading, hintStream, handleHintRequest, hintLevel],
@@ -842,11 +839,6 @@ function SessionContent({
             testRunCount={testRunCountRef.current}
           />
         </ErrorBoundary>
-        <SessionReportModal
-          open={showSessionReportModal}
-          onClose={() => setShowSessionReportModal(false)}
-          sessionId={sessionId}
-        />
       </div>
     </div>
   );
