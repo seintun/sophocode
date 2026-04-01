@@ -43,6 +43,7 @@ export default function SessionSummaryPage() {
   const [data, setData] = useState<SummaryData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [feedbackTimeout, setFeedbackTimeout] = useState(false);
 
   useEffect(() => {
     async function fetchSummary() {
@@ -68,6 +69,45 @@ export default function SessionSummaryPage() {
 
     fetchSummary();
   }, [sessionId, router]);
+
+  useEffect(() => {
+    // Only poll when session data is loaded, feedback is still null, and not timed out
+    if (!data || data.feedback !== null || feedbackTimeout) {
+      // Reset timeout flag when feedback becomes available or data changes
+      if (data && data.feedback !== null) {
+        setFeedbackTimeout(false);
+      }
+      return;
+    }
+
+    let attempts = 0;
+    const maxAttempts = 10; // 15s total (1.5s interval)
+
+    const interval = setInterval(async () => {
+      attempts++;
+
+      try {
+        const res = await fetch(`/api/sessions/${sessionId}`);
+        if (res.ok) {
+          const updated = await res.json();
+          if (updated.feedback) {
+            setData(updated);
+            clearInterval(interval);
+            return;
+          }
+        }
+      } catch {
+        // silent retry
+      }
+
+      if (attempts >= maxAttempts) {
+        clearInterval(interval);
+        setFeedbackTimeout(true);
+      }
+    }, 1500);
+
+    return () => clearInterval(interval);
+  }, [data, sessionId, feedbackTimeout]);
 
   if (loading) {
     return (
@@ -133,7 +173,7 @@ export default function SessionSummaryPage() {
         </Card>
       </div>
 
-      {data.feedback && (
+      {data.feedback ? (
         <div className="mb-6 space-y-4">
           <FeedbackSection
             title="Strengths"
@@ -153,6 +193,38 @@ export default function SessionSummaryPage() {
           <FeedbackSection
             title="Complexity Note"
             content={data.feedback.complexityNote}
+            color="var(--color-ai-coach)"
+          />
+        </div>
+      ) : feedbackTimeout ? (
+        <div className="mb-6">
+          <Card>
+            <p className="text-sm text-[var(--color-text-secondary)]">
+              Feedback unavailable — check back later. You can return to this page anytime from your
+              session history.
+            </p>
+          </Card>
+        </div>
+      ) : (
+        <div className="mb-6 space-y-4">
+          <FeedbackSection
+            title="Strengths"
+            content="Preparing your post-attempt analysis... Feedback will be available here shortly."
+            color="var(--color-success)"
+          />
+          <FeedbackSection
+            title="Areas for Improvement"
+            content="Preparing your post-attempt analysis... Feedback will be available here shortly."
+            color="var(--color-warning)"
+          />
+          <FeedbackSection
+            title="Suggestions"
+            content="Preparing your post-attempt analysis... Feedback will be available here shortly."
+            color="var(--color-accent)"
+          />
+          <FeedbackSection
+            title="Complexity Note"
+            content="Preparing your post-attempt analysis... Feedback will be available here shortly."
             color="var(--color-ai-coach)"
           />
         </div>
