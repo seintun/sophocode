@@ -44,7 +44,7 @@ describe('Navbar', () => {
     expect(getMobileMenu()).not.toBeInTheDocument();
 
     // Click toggle button
-    const toggleBtn = screen.getByRole('button');
+    const toggleBtn = screen.getByLabelText('Open menu');
     fireEvent.click(toggleBtn);
 
     expect(getMobileMenu()).toBeInTheDocument();
@@ -58,7 +58,7 @@ describe('Navbar', () => {
     render(<Navbar />);
 
     // Open menu
-    const toggleBtn = screen.getByRole('button');
+    const toggleBtn = screen.getByLabelText('Open menu');
     fireEvent.click(toggleBtn);
     expect(document.getElementById('mobile-menu')).toBeInTheDocument();
 
@@ -71,7 +71,7 @@ describe('Navbar', () => {
     render(<Navbar />);
 
     // Open menu
-    const toggleBtn = screen.getByRole('button');
+    const toggleBtn = screen.getByLabelText('Open menu');
     fireEvent.click(toggleBtn);
 
     expect(document.getElementById('mobile-menu')).toBeInTheDocument();
