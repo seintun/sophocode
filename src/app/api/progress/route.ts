@@ -186,7 +186,7 @@ async function handler(_request: NextRequest): Promise<Response> {
     const patternStats = Array.from(problemsByPattern.entries()).map(([pattern, total]) => {
       const states = problemHistoryWithSessionMeta.filter((h) => h.problem.pattern === pattern);
       const mastered = states.filter((s) => s.mastery === 'MASTERED').length;
-      const inProgress = states.filter((s) => s.sessionStatus === 'ACTIVE').length;
+      const inProgress = states.filter((s) => s.mastery === 'IN_PROGRESS').length;
       const needsRefreshCount = states.filter((s) => s.mastery === 'NEEDS_REFRESH').length;
       return {
         pattern,
