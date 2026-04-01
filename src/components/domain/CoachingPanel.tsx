@@ -343,6 +343,9 @@ export function CoachingPanel({
                         <StreamedMarkdownMessage
                           content={sanitizeCoachingContent(
                             text || (isStreamingActive ? '...' : ''),
+                            {
+                              mode,
+                            },
                           )}
                           accentColor={config.colors.primary}
                           isStreaming={isStreamingActive}
@@ -404,7 +407,7 @@ export function CoachingPanel({
                   </div>
                   {hintStream.text ? (
                     <StreamedMarkdownMessage
-                      content={sanitizeCoachingContent(hintStream.text)}
+                      content={sanitizeCoachingContent(hintStream.text, { mode })}
                       accentColor={config.colors.primary}
                       isStreaming={hintStream.isLoading}
                       cursorColor={config.colors.primary}
