@@ -5,8 +5,7 @@ import { withAuth } from '@/lib/errors/api';
 import type { Pattern } from '@/generated/prisma/enums';
 
 async function handler(req: NextRequest, { guestId }: { guestId: string }): Promise<Response> {
-  const requestedGuestId = req.nextUrl.searchParams.get('guestId');
-  const effectiveGuestId = requestedGuestId ?? guestId;
+  const effectiveGuestId = guestId;
 
   const cached = await getCachedRecommendation(effectiveGuestId);
   if (cached) {
