@@ -116,7 +116,7 @@ export async function GET(request: NextRequest): Promise<Response> {
 
     return NextResponse.json(result, {
       headers: {
-        'Cache-Control': 'private, max-age=300, stale-while-revalidate=3600',
+        'Cache-Control': 'private, no-store, max-age=0',
       },
     });
   } catch (error) {

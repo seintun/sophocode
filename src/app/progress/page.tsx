@@ -69,7 +69,7 @@ export default function ProgressPage() {
   useEffect(() => {
     async function fetchProgress() {
       try {
-        const res = await fetch('/api/progress');
+        const res = await fetch('/api/progress', { cache: 'no-store' });
         if (!res.ok) throw new Error('Failed to load progress');
         const json = await res.json();
         setData(json);

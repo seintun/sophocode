@@ -205,7 +205,7 @@ async function handler(_request: NextRequest): Promise<Response> {
       },
       {
         headers: {
-          'Cache-Control': 'private, max-age=300, stale-while-revalidate=3600',
+          'Cache-Control': 'private, no-store, max-age=0',
         },
       },
     );

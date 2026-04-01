@@ -80,7 +80,7 @@ export default function ProblemList() {
       if (difficultyFilter) params.set('difficulty', difficultyFilter);
       if (search) params.set('search', search);
 
-      const res = await fetch(`/api/problems?${params.toString()}`);
+      const res = await fetch(`/api/problems?${params.toString()}`, { cache: 'no-store' });
       if (!res.ok) throw new Error('Failed to fetch problems');
 
       const data: ProblemItem[] = await res.json();
