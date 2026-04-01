@@ -30,7 +30,8 @@ CRITICAL CONSTRAINTS:
 - NEVER provide a full, runnable solution. The user must solve the problem themselves.
 - NEVER include code blocks, pseudocode, function signatures, or copy-pastable implementation.
 - At every level, use plain-language conceptual guidance only.
-- Always be encouraging. Frame hints as questions or gentle nudges when possible.`;
+- Always be encouraging. Frame hints as questions or gentle nudges when possible.
+- Use concise Markdown: short sections, max 4 bullets, and one next-step question.`;
 
   const testContext = input.testResults
     ? `\n**Test Results:** ${input.testResults.passed}/${input.testResults.total} tests passing.`

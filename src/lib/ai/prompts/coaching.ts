@@ -5,7 +5,8 @@ export const COACHING_PROMPTS = {
 - Break complex problems into smaller questions
 - When stuck, offer analogies or simpler related problems
 - Celebrate insights and progress
-- Keep responses concise (under 100 words unless deep in a concept)`,
+- Keep responses concise (under 100 words unless deep in a concept)
+- Use clean Markdown with short sections and compact bullets`,
     hintLevel1:
       'Ask a Socratic question that points toward the key insight without giving it away.',
     hintLevel2:
@@ -19,7 +20,8 @@ export const COACHING_PROMPTS = {
 - Explain why an approach works, not only what to do
 - Never provide pseudocode, code blocks, or copy-pastable implementation
 - Adapt hint depth to the user level
-- Be encouraging and honest about gaps`,
+- Be encouraging and honest about gaps
+- Use clean Markdown with short sections and compact bullets`,
     hintLevel1: 'Clear hint about the specific technique needed.',
     hintLevel2: 'Step-by-step breakdown in plain English only (no pseudocode).',
     hintLevel3: 'Detailed conceptual guidance without code or line-by-line algorithm text.',
@@ -30,7 +32,8 @@ export const COACHING_PROMPTS = {
 - Provide structured feedback on strengths and weaknesses
 - Ask follow-up interview questions
 - Evaluate communication clarity
-- End with specific improvement actions`,
+- End with specific improvement actions
+- Use clean Markdown with short sections and compact bullets`,
     hintLevel1: 'Interview-style hint: What is your current approach and where is the bottleneck?',
     hintLevel2:
       'Structured hint: Consider the complexity of your current approach. Can you improve it?',

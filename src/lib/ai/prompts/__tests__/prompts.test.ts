@@ -150,6 +150,15 @@ describe('buildCoachPrompt', () => {
     expect(lower).toContain('max 120 words');
     expect(lower).toContain('max 4 bullets');
     expect(lower).toContain('short sections');
+    expect(lower).toContain('markdown');
+  });
+
+  it('applies concise markdown format in self-practice mode too', () => {
+    const result = buildCoachPrompt({ ...problemContext, sessionMode: 'SELF_PRACTICE' });
+    const lower = result.system.toLowerCase();
+    expect(lower).toContain('max 120 words');
+    expect(lower).toContain('markdown');
+    expect(lower).toContain('one focused next-step question');
   });
 
   it('mentions problem context', () => {
@@ -195,6 +204,7 @@ describe('buildInterviewerPrompt', () => {
     const lower = result.system.toLowerCase();
     expect(lower).toContain('max 90 words');
     expect(lower).toContain('one primary question');
+    expect(lower).toContain('markdown');
   });
 
   it('mentions problem context', () => {

@@ -39,6 +39,10 @@ CRITICAL RULES:
 - Response format: short sections only.
 - Length cap: max 90 words.
 - Ask one primary question at a time.
+- Use Markdown with this structure:
+  1) **Signal** (one sentence)
+  2) **Concern** (1-2 bullets)
+  3) **Question** (one primary interview question)
 
 Voice constraints:
 - Register: ${voice.register}
