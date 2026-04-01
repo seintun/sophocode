@@ -10,7 +10,6 @@ import { HintLoader } from '@/components/ui/HintLoader';
 import { getSophiaConfig, SOPHIA_AVATAR } from '@/lib/sophia';
 import type { SessionMode } from '@/generated/prisma/enums';
 import type { UIMessage } from 'ai';
-import { WeakPatternsPanel } from '@/components/domain/WeakPatternsPanel';
 
 interface CoachingPanelProps {
   mode: SessionMode;
@@ -55,7 +54,6 @@ export function CoachingPanel({
   const [input, setInput] = useState('');
   const [avatarError, setAvatarError] = useState(false);
   const [cooldownRemaining, setCooldownRemaining] = useState(0);
-  const [showWeakPatterns, setShowWeakPatterns] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const cooldownEndRef = useRef<number>(0);
@@ -494,16 +492,7 @@ export function CoachingPanel({
                   View session report
                 </button>
               )}
-              <button
-                type="button"
-                onClick={() => setShowWeakPatterns((v) => !v)}
-                className="text-xs text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
-              >
-                {showWeakPatterns ? 'Hide weak patterns' : 'Show weak patterns (from your history)'}
-              </button>
             </div>
-
-            {showWeakPatterns && <WeakPatternsPanel />}
 
             <div ref={messagesEndRef} />
           </div>
