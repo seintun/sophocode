@@ -6,6 +6,9 @@ import remarkGfm from 'remark-gfm';
 import type { Metadata } from 'next';
 import { getPostBySlug, getAllPosts } from '@/lib/content';
 
+// Per-request nonce requires dynamic rendering
+export const dynamic = 'force-dynamic';
+
 async function getNonce(): Promise<string | undefined> {
   const h = await headers();
   const csp = h.get('content-security-policy') ?? h.get('content-security-policy-report-only');
@@ -75,7 +78,6 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
 
   return (
     <>
-      {}
       <script
         type="application/ld+json"
         nonce={nonce}

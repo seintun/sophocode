@@ -8,6 +8,9 @@ import JsonLdSchema from '@/components/seo/JsonLdSchema';
 import Navbar from '@/components/ui/Navbar';
 import { OfflineBanner } from '@/components/ui/OfflineBanner';
 
+// Per-request CSP nonce requires dynamic rendering
+export const dynamic = 'force-dynamic';
+
 /**
  * Extract CSP nonce from request headers (set by middleware).
  * Next.js also uses this internally for __NEXT_DATA__ and other inline scripts.
