@@ -22,10 +22,23 @@ export function useUserProfile() {
   const [profile, setProfile] = useState<UserProfile>(DEFAULT_PROFILE);
 
   useEffect(() => {
-    fetch('/api/user/profile')
-      .then((r) => r.json())
-      .then((data: UserProfile) => setProfile(data))
+    const controller = new AbortController();
+    let mounted = true;
+
+    fetch('/api/user/profile', { signal: controller.signal })
+      .then((r) => {
+        if (!r.ok) return;
+        return r.json() as Promise<UserProfile>;
+      })
+      .then((data) => {
+        if (mounted && data) setProfile(data);
+      })
       .catch(() => {});
+
+    return () => {
+      mounted = false;
+      controller.abort();
+    };
   }, []);
 
   return profile;

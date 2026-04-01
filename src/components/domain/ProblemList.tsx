@@ -25,8 +25,8 @@ interface DailyChallenge {
   id: string;
   title: string;
   slug: string;
-  difficulty: string;
-  pattern: string;
+  difficulty: Difficulty;
+  pattern: Pattern;
 }
 
 const PATTERN_OPTIONS = [
@@ -96,7 +96,7 @@ export default function ProblemList() {
   }, [fetchProblems]);
 
   useEffect(() => {
-    fetch('/api/admin/daily-challenge')
+    fetch('/api/daily-challenge')
       .then((r) => r.json())
       .then((data: { dailyChallenge: DailyChallenge | null }) =>
         setDailyChallenge(data.dailyChallenge ?? null),
@@ -116,10 +116,10 @@ export default function ProblemList() {
     return copy;
   }, [problems, sortBy]);
 
-  const alreadySolved = dailyChallenge
-    ? problems.find((p) => p.slug === dailyChallenge.slug)?.mastery === 'MASTERED' ||
-      problems.find((p) => p.slug === dailyChallenge.slug)?.mastery === 'NEEDS_REFRESH'
-    : false;
+  const dailyMastery = dailyChallenge
+    ? (problems.find((p) => p.slug === dailyChallenge.slug)?.mastery ?? null)
+    : null;
+  const alreadySolved = dailyMastery === 'MASTERED' || dailyMastery === 'NEEDS_REFRESH';
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">

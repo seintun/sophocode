@@ -1,8 +1,9 @@
+import type { ReactNode } from 'react';
 import { render, screen, act } from '@testing-library/react';
 import { DailyChallengeBanner } from '../DailyChallengeBanner';
 
 vi.mock('next/link', () => ({
-  default: ({ children, href, ...props }: { children: React.ReactNode; href: string }) => (
+  default: ({ children, href, ...props }: { children: ReactNode; href: string }) => (
     <a href={href} {...props}>
       {children}
     </a>
