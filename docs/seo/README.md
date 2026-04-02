@@ -12,14 +12,14 @@ This directory documents the SEO strategy, technical implementation, monitoring 
 
 ## Current Status
 
-| Phase                           | Description                                      | Status  |
-| ------------------------------- | ------------------------------------------------ | ------- |
-| 1 — Technical foundation        | Metadata, sitemap, robots, headers               | Done    |
-| 2 — Structured data             | JSON-LD schemas (Org, WebApp, FAQ, Article)      | Done    |
-| 3 — Server component conversion | Problem detail page with `generateMetadata`      | Done    |
-| 4 — Content infrastructure      | Blog + docs routes, 3 posts, gray-matter         | Done    |
-| 5 — GEO / AI search             | `llms.txt`, Article schema on blog, robots allow | Done    |
-| 6 — Monitoring                  | Search Console, GA4, audit docs                  | Ongoing |
+| Phase                           | Description                                             | Status  |
+| ------------------------------- | ------------------------------------------------------- | ------- |
+| 1 — Technical foundation        | Metadata, sitemap, robots, headers                      | Done    |
+| 2 — Structured data             | JSON-LD schemas (Org, WebApp, FAQ, Article)             | Done    |
+| 3 — Server component conversion | Problem detail page with `generateMetadata`             | Done    |
+| 4 — Content infrastructure      | Blog + docs routes, 24-post annual archive, gray-matter | Done    |
+| 5 — GEO / AI search             | `llms.txt`, Article schema on blog, robots allow        | Done    |
+| 6 — Monitoring                  | Search Console, GA4, audit docs                         | Ongoing |
 
 ## Quick Reference
 

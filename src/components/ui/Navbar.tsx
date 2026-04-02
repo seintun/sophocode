@@ -6,7 +6,6 @@ import { usePathname } from 'next/navigation';
 import { StreakCounter } from '@/components/domain/StreakCounter';
 import { CoinBalance } from '@/components/domain/CoinBalance';
 import { useUserProfile } from '@/hooks/useUserProfile';
-import { SettingsPanel } from '@/components/domain/SettingsPanel';
 
 const NAV_LINKS = [
   { href: '/practice', label: 'Practice' },
@@ -17,7 +16,6 @@ const NAV_LINKS = [
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
   const pathname = usePathname();
   const profile = useUserProfile();
   const hamburgerRef = useRef<HTMLButtonElement>(null);
@@ -47,9 +45,9 @@ export default function Navbar() {
   return (
     <nav
       aria-label="Main navigation"
-      className="relative border-b border-[var(--color-border)] bg-[var(--color-bg-secondary)]"
+      className="sticky top-0 z-40 border-b border-[var(--color-border)] bg-[var(--color-bg-secondary)]/90 backdrop-blur"
     >
-      <div className="flex items-center justify-between px-4 py-2 sm:px-6 sm:py-3">
+      <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-2 sm:px-6 sm:py-3">
         {/* Logo */}
         <Link
           href="/"
@@ -59,7 +57,7 @@ export default function Navbar() {
         </Link>
 
         {/* Desktop nav */}
-        <div className="hidden items-center gap-6 sm:flex">
+        <div className="hidden items-center gap-1 rounded-full border border-[var(--color-border)] bg-[var(--color-bg-primary)]/40 p-1 sm:flex">
           {NAV_LINKS.map(({ href, label }) => (
             <NavLink key={href} href={href} active={isActive(href)}>
               {label}
@@ -68,39 +66,23 @@ export default function Navbar() {
         </div>
 
         {/* Desktop streak + coins */}
-        <div className="hidden items-center gap-4 sm:flex">
-          <StreakCounter
-            currentStreak={profile.currentStreak}
-            longestStreak={profile.longestStreak}
-            lastActivityAt={profile.lastActivityAt}
-          />
-          <CoinBalance coins={profile.coins} tier={profile.tier} />
-        </div>
-
-        {/* Desktop sign-in */}
         <div className="hidden items-center gap-3 sm:flex">
-          <button
-            type="button"
-            onClick={() => setSettingsOpen(true)}
-            className="rounded-md p-1.5 text-[var(--color-text-secondary)] transition-colors hover:bg-[var(--color-bg-elevated)] hover:text-[var(--color-text-primary)]"
-            aria-label="Open settings"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <path
-                d="M12 15.5A3.5 3.5 0 1 0 12 8.5a3.5 3.5 0 0 0 0 7ZM19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.04 1.55V21a2 2 0 1 1-4 0v-.09A1.7 1.7 0 0 0 8.96 19.4a1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.55-1.04H3a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 4.6 8.96a1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 8.96 4.6 1.7 1.7 0 0 0 10 3.05V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1.04 1.55 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.4 8.96c.17.4.53.67.96.74H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.51 1.3Z"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </button>
-          <span className="flex items-center gap-1.5 text-sm font-medium text-[var(--color-text-muted)]">
-            Sign in
-            <span className="rounded-full bg-[var(--color-accent)]/10 px-1.5 py-0.5 text-[10px] font-semibold text-[var(--color-accent)]">
-              soon
+          <div className="group relative">
+            <StreakCounter
+              currentStreak={profile.currentStreak}
+              longestStreak={profile.longestStreak}
+              lastActivityAt={profile.lastActivityAt}
+            />
+            <span className="pointer-events-none absolute -bottom-9 left-1/2 hidden -translate-x-1/2 whitespace-nowrap rounded-md border border-[var(--color-border)] bg-[var(--color-bg-elevated)] px-2 py-1 text-xs text-[var(--color-text-secondary)] shadow-lg group-hover:block group-focus-within:block">
+              Practice streak
             </span>
-          </span>
+          </div>
+          <div className="group relative">
+            <CoinBalance coins={profile.coins} tier={profile.tier} />
+            <span className="pointer-events-none absolute -bottom-9 left-1/2 hidden -translate-x-1/2 whitespace-nowrap rounded-md border border-[var(--color-border)] bg-[var(--color-bg-elevated)] px-2 py-1 text-xs text-[var(--color-text-secondary)] shadow-lg group-hover:block group-focus-within:block">
+              Tokens earned
+            </span>
+          </div>
         </div>
 
         {/* Mobile hamburger */}
@@ -111,7 +93,7 @@ export default function Navbar() {
           aria-expanded={open}
           aria-controls="mobile-menu"
           onClick={() => setOpen((v) => !v)}
-          className="flex h-8 w-8 items-center justify-center rounded-md text-[var(--color-text-secondary)] transition-colors hover:bg-[var(--color-bg-elevated)] hover:text-[var(--color-text-primary)] sm:hidden"
+          className="flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-primary)]/60 text-[var(--color-text-secondary)] transition-colors hover:bg-[var(--color-bg-elevated)] hover:text-[var(--color-text-primary)] sm:hidden"
         >
           {open ? (
             // X icon
@@ -141,10 +123,10 @@ export default function Navbar() {
       {open && (
         <div
           id="mobile-menu"
-          className="absolute left-0 right-0 top-full z-50 border-b border-[var(--color-border)] bg-[var(--color-bg-secondary)] px-4 pb-4 pt-2 sm:hidden"
+          className="absolute left-0 right-0 top-full z-50 border-b border-[var(--color-border)] bg-[var(--color-bg-secondary)]/95 px-4 pb-4 pt-2 backdrop-blur sm:hidden"
           style={{ animation: 'fadeIn 0.15s ease-out' }}
         >
-          <ul className="flex flex-col gap-1">
+          <ul className="flex flex-col gap-1 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-primary)]/40 p-2">
             {NAV_LINKS.map(({ href, label }, i) => {
               const active = isActive(href);
               return (
@@ -154,9 +136,9 @@ export default function Navbar() {
                     href={href}
                     onClick={close}
                     aria-current={active ? 'page' : undefined}
-                    className={`block rounded-md px-3 py-2.5 text-sm font-medium transition-colors ${
+                    className={`block rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
                       active
-                        ? 'bg-[var(--color-bg-elevated)] text-[var(--color-accent)]'
+                        ? 'bg-[var(--color-bg-elevated)] text-[var(--color-accent)] ring-1 ring-[var(--color-accent)]/20'
                         : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-elevated)] hover:text-[var(--color-text-primary)]'
                     }`}
                   >
@@ -169,40 +151,23 @@ export default function Navbar() {
               <div className="my-1 border-t border-[var(--color-border)]" />
             </li>
             <li>
-              <div className="flex items-center gap-4 px-3 py-2.5">
-                <StreakCounter
-                  currentStreak={profile.currentStreak}
-                  longestStreak={profile.longestStreak}
-                  lastActivityAt={profile.lastActivityAt}
-                />
-                <CoinBalance coins={profile.coins} tier={profile.tier} />
+              <div className="rounded-lg bg-[var(--color-bg-secondary)] px-3 py-2.5">
+                <div className="mb-2 text-xs font-medium uppercase tracking-wide text-[var(--color-text-muted)]">
+                  Progress
+                </div>
+                <div className="flex items-center gap-4">
+                  <StreakCounter
+                    currentStreak={profile.currentStreak}
+                    longestStreak={profile.longestStreak}
+                    lastActivityAt={profile.lastActivityAt}
+                  />
+                  <CoinBalance coins={profile.coins} tier={profile.tier} />
+                </div>
               </div>
-            </li>
-            <li>
-              <button
-                type="button"
-                onClick={() => {
-                  close();
-                  setSettingsOpen(true);
-                }}
-                className="w-full rounded-md px-3 py-2.5 text-left text-sm font-medium text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-elevated)] hover:text-[var(--color-text-primary)]"
-              >
-                Settings
-              </button>
-            </li>
-            <li>
-              <span className="flex items-center gap-1.5 rounded-md px-3 py-2.5 text-sm font-medium text-[var(--color-text-muted)]">
-                Sign in
-                <span className="rounded-full bg-[var(--color-accent)]/10 px-1.5 py-0.5 text-[10px] font-semibold text-[var(--color-accent)]">
-                  soon
-                </span>
-              </span>
             </li>
           </ul>
         </div>
       )}
-
-      <SettingsPanel open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </nav>
   );
 }
@@ -219,9 +184,9 @@ function NavLink({
   return (
     <Link
       href={href}
-      className={`text-sm font-medium transition-colors ${
+      className={`rounded-full px-4 py-2 text-sm font-medium transition-colors ${
         active
-          ? 'text-[var(--color-accent)]'
+          ? 'bg-[var(--color-bg-elevated)] text-[var(--color-accent)]'
           : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'
       }`}
     >

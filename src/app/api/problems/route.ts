@@ -7,6 +7,18 @@ import { getGuestIdFromCookie } from '@/lib/guest';
 import { cookies } from 'next/headers';
 import { cleanupExpiredSessions } from '@/lib/session/expiry';
 
+let dbPatternCache: Set<string> | null = null;
+
+async function getDbPatternValues(): Promise<Set<string>> {
+  if (dbPatternCache) return dbPatternCache;
+
+  const rows = await prisma.$queryRaw<Array<{ value: string }>>(Prisma.sql`
+    SELECT unnest(enum_range(NULL::"Pattern"))::text AS value
+  `);
+  dbPatternCache = new Set(rows.map((row) => row.value));
+  return dbPatternCache;
+}
+
 export async function GET(request: NextRequest): Promise<Response> {
   try {
     const searchParams = request.nextUrl.searchParams;
@@ -18,72 +30,87 @@ export async function GET(request: NextRequest): Promise<Response> {
     const cookieStore = await cookies();
     const guestId = getGuestIdFromCookie(cookieStore);
 
-    const where: {
-      pattern?: Pattern;
-      difficulty?: Difficulty;
-      isCurated?: boolean;
-    } = {};
+    const dbPatternValues = await getDbPatternValues();
+    const safePattern = pattern && dbPatternValues.has(pattern) ? pattern : null;
 
-    if (pattern) {
-      where.pattern = pattern;
-    }
+    const patternFilter = safePattern
+      ? Prisma.sql`AND p.pattern = ${safePattern}::"Pattern"`
+      : Prisma.empty;
+    const difficultyFilter = difficulty
+      ? Prisma.sql`AND p.difficulty = ${difficulty}::"Difficulty"`
+      : Prisma.empty;
+    const curatedFilter = curated ? Prisma.sql`AND p."isCurated" = true` : Prisma.empty;
 
-    if (difficulty) where.difficulty = difficulty;
-    if (curated) where.isCurated = true;
-
-    const orderBy = curated
-      ? [{ curatedOrder: 'asc' as const }]
-      : [{ difficulty: 'asc' as const }, { sortOrder: 'asc' as const }, { title: 'asc' as const }];
+    type ProblemRow = {
+      id: string;
+      title: string;
+      slug: string;
+      difficulty: Difficulty;
+      pattern: string;
+      curatedOrder: number | null;
+      testCaseCount: number;
+    };
 
     const problems = search
-      ? await (async () => {
-          const patternFilter = pattern
-            ? Prisma.sql`AND pattern = ${pattern}::"Pattern"`
-            : Prisma.empty;
-          const difficultyFilter = difficulty
-            ? Prisma.sql`AND difficulty = ${difficulty}::"Difficulty"`
-            : Prisma.empty;
-          const curatedFilter = curated ? Prisma.sql`AND "isCurated" = true` : Prisma.empty;
-
-          const ranked = await prisma.$queryRaw<Array<{ id: string }>>(Prisma.sql`
-            SELECT id
-            FROM "Problem"
+      ? await prisma.$queryRaw<ProblemRow[]>(Prisma.sql`
+          WITH ranked AS (
+            SELECT p.id,
+              ROW_NUMBER() OVER (
+                ORDER BY GREATEST(similarity(p.title, ${search}), similarity(p.statement, ${search})) DESC
+              ) AS rank
+            FROM "Problem" p
             WHERE 1=1
+              ${patternFilter}
+              ${difficultyFilter}
+              ${curatedFilter}
+              AND (
+                similarity(p.title, ${search}) > 0.1
+                OR similarity(p.statement, ${search}) > 0.1
+                OR p.title ILIKE ${`%${search}%`}
+              )
+            LIMIT 100
+          )
+          SELECT
+            p.id,
+            p.title,
+            p.slug,
+            p.difficulty,
+            p.pattern::text AS pattern,
+            p."curatedOrder",
+            COALESCE(tc.count, 0)::int AS "testCaseCount"
+          FROM ranked r
+          JOIN "Problem" p ON p.id = r.id
+          LEFT JOIN (
+            SELECT "problemId", COUNT(*)::int AS count
+            FROM "TestCase"
+            GROUP BY "problemId"
+          ) tc ON tc."problemId" = p.id
+          ORDER BY r.rank ASC
+        `)
+      : await prisma.$queryRaw<ProblemRow[]>(Prisma.sql`
+          SELECT
+            p.id,
+            p.title,
+            p.slug,
+            p.difficulty,
+            p.pattern::text AS pattern,
+            p."curatedOrder",
+            COALESCE(tc.count, 0)::int AS "testCaseCount"
+          FROM "Problem" p
+          LEFT JOIN (
+            SELECT "problemId", COUNT(*)::int AS count
+            FROM "TestCase"
+            GROUP BY "problemId"
+          ) tc ON tc."problemId" = p.id
+          WHERE 1=1
             ${patternFilter}
             ${difficultyFilter}
             ${curatedFilter}
-            AND (
-              similarity(title, ${search}) > 0.1
-              OR similarity(statement, ${search}) > 0.1
-              OR title ILIKE ${`%${search}%`}
-            )
-            ORDER BY GREATEST(similarity(title, ${search}), similarity(statement, ${search})) DESC
-            LIMIT 100
-          `);
-
-          const ids = ranked.map((row) => row.id);
-          if (ids.length === 0) return [];
-
-          const byId = new Map(
-            (
-              await prisma.problem.findMany({
-                where: { id: { in: ids } },
-                include: {
-                  _count: { select: { testCases: true } },
-                },
-              })
-            ).map((problem) => [problem.id, problem]),
-          );
-
-          return ids.map((id) => byId.get(id)).filter((problem) => problem != null);
-        })()
-      : await prisma.problem.findMany({
-          where,
-          orderBy,
-          include: {
-            _count: { select: { testCases: true } },
-          },
-        });
+          ORDER BY
+            ${curated ? Prisma.sql`p."curatedOrder" ASC,` : Prisma.empty}
+            ${curated ? Prisma.empty : Prisma.sql`p.difficulty ASC, p."sortOrder" ASC,`}
+            p.title ASC
+        `);
 
     let masteryMap: Record<string, string> = {};
     const sessionStatusMap: Record<string, 'ACTIVE' | 'ABANDONED' | null> = {};
@@ -149,7 +176,7 @@ export async function GET(request: NextRequest): Promise<Response> {
       difficulty: p.difficulty,
       pattern: p.pattern,
       curatedOrder: p.curatedOrder,
-      testCaseCount: p._count.testCases,
+      testCaseCount: p.testCaseCount,
       mastery: masteryMap[p.id] ?? null,
       sessionStatus: sessionStatusMap[p.id] ?? null,
     }));

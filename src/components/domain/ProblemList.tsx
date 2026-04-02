@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import Link from 'next/link';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Input } from '@/components/ui/Input';
@@ -32,11 +33,26 @@ interface DailyChallenge {
 
 const PATTERN_OPTIONS = [
   { value: '', label: 'All Patterns' },
-  { value: 'HASH_MAPS', label: 'Hash Maps' },
   { value: 'ARRAYS_STRINGS', label: 'Arrays & Strings' },
+  { value: 'HASH_MAPS', label: 'Hash Maps' },
   { value: 'TWO_POINTERS', label: 'Two Pointers' },
   { value: 'SLIDING_WINDOW', label: 'Sliding Window' },
   { value: 'BINARY_SEARCH', label: 'Binary Search' },
+  { value: 'LINKED_LISTS', label: 'Linked Lists' },
+  { value: 'STACKS_QUEUES', label: 'Stacks & Queues' },
+  { value: 'TREES', label: 'Trees' },
+  { value: 'GRAPHS', label: 'Graphs' },
+  { value: 'RECURSION_BACKTRACKING', label: 'Recursion & Backtracking' },
+  { value: 'DYNAMIC_PROGRAMMING', label: 'Dynamic Programming' },
+  { value: 'HEAPS', label: 'Heaps' },
+  { value: 'SORTING', label: 'Sorting' },
+  { value: 'GREEDY', label: 'Greedy' },
+  { value: 'TRIES', label: 'Tries' },
+  { value: 'BIT_MANIPULATION', label: 'Bit Manipulation' },
+  { value: 'INTERVALS', label: 'Intervals' },
+  { value: 'ADVANCED_GRAPHS', label: 'Advanced Graphs' },
+  { value: 'MATH_GEOMETRY', label: 'Math & Geometry' },
+  { value: 'PREFIX_SUM', label: 'Prefix Sum' },
 ];
 
 const DIFFICULTIES: Difficulty[] = ['EASY', 'MEDIUM', 'HARD'];
@@ -61,12 +77,21 @@ function difficultySortOrder(d: Difficulty): number {
 }
 
 export default function ProblemList() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const didSyncFromUrlRef = useRef(false);
   const [problems, setProblems] = useState<ProblemItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [search, setSearch] = useState('');
-  const [pattern, setPattern] = useState('');
-  const [difficultyFilter, setDifficultyFilter] = useState<Difficulty | ''>('');
+  const [search, setSearch] = useState(() => searchParams.get('search') ?? '');
+  const [pattern, setPattern] = useState(() => searchParams.get('pattern') ?? '');
+  const [difficultyFilter, setDifficultyFilter] = useState<Difficulty | ''>(() => {
+    const urlDifficulty = searchParams.get('difficulty');
+    return urlDifficulty === 'EASY' || urlDifficulty === 'MEDIUM' || urlDifficulty === 'HARD'
+      ? urlDifficulty
+      : '';
+  });
   const [sortBy, setSortBy] = useState('difficulty');
   const [dailyChallenge, setDailyChallenge] = useState<DailyChallenge | null>(null);
 
@@ -95,6 +120,43 @@ export default function ProblemList() {
   useEffect(() => {
     fetchProblems();
   }, [fetchProblems]);
+
+  useEffect(() => {
+    const urlPattern = searchParams.get('pattern') ?? '';
+    const urlDifficulty = searchParams.get('difficulty');
+    const urlSearch = searchParams.get('search') ?? '';
+    const normalizedDifficulty: Difficulty | '' =
+      urlDifficulty === 'EASY' || urlDifficulty === 'MEDIUM' || urlDifficulty === 'HARD'
+        ? urlDifficulty
+        : '';
+
+    setPattern((prev) => (prev === urlPattern ? prev : urlPattern));
+    setDifficultyFilter((prev) => (prev === normalizedDifficulty ? prev : normalizedDifficulty));
+    setSearch((prev) => (prev === urlSearch ? prev : urlSearch));
+
+    didSyncFromUrlRef.current = true;
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (!didSyncFromUrlRef.current) return;
+
+    const next = new URLSearchParams(searchParams.toString());
+
+    if (pattern) next.set('pattern', pattern);
+    else next.delete('pattern');
+
+    if (difficultyFilter) next.set('difficulty', difficultyFilter);
+    else next.delete('difficulty');
+
+    if (search) next.set('search', search);
+    else next.delete('search');
+
+    const nextQuery = next.toString();
+    const currentQuery = searchParams.toString();
+    if (nextQuery !== currentQuery) {
+      router.replace(nextQuery ? `${pathname}?${nextQuery}` : pathname, { scroll: false });
+    }
+  }, [difficultyFilter, pathname, pattern, router, search, searchParams]);
 
   useEffect(() => {
     fetch('/api/daily-challenge')

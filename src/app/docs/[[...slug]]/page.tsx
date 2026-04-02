@@ -48,11 +48,55 @@ export default async function DocsPage({ params }: { params: Promise<{ slug?: st
   if (!doc) notFound();
 
   const allDocs = getAllPosts('docs');
+  const currentIndex = allDocs.findIndex((d) => d.slug === docSlug);
+  const prevDoc = currentIndex > 0 ? allDocs[currentIndex - 1] : null;
+  const nextDoc =
+    currentIndex >= 0 && currentIndex < allDocs.length - 1 ? allDocs[currentIndex + 1] : null;
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-16">
-      <div className="flex gap-12">
-        <nav className="hidden w-48 shrink-0 md:block">
+    <div className="mx-auto max-w-6xl px-4 pb-20 pt-10 sm:pt-14">
+      <header
+        className="mb-8 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)] px-5 py-6 sm:px-8"
+        style={{
+          background:
+            'radial-gradient(circle at top right, color-mix(in srgb, var(--color-accent) 11%, transparent), transparent 55%), var(--color-bg-secondary)',
+        }}
+      >
+        <span className="mb-3 inline-flex rounded-full border border-[var(--color-border)] bg-[var(--color-bg-primary)]/60 px-3 py-1 text-xs font-medium uppercase tracking-wide text-[var(--color-text-muted)]">
+          Docs
+        </span>
+        <h1 className="text-2xl font-bold tracking-tight text-[var(--color-text-primary)] sm:text-3xl">
+          {doc.frontmatter.title}
+        </h1>
+        <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[var(--color-text-secondary)] sm:text-base">
+          {doc.frontmatter.description}
+        </p>
+      </header>
+
+      <details className="mb-6 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)] p-3 md:hidden">
+        <summary className="cursor-pointer text-sm font-semibold text-[var(--color-text-primary)]">
+          Browse docs
+        </summary>
+        <ul className="mt-3 space-y-1">
+          {allDocs.map((d) => (
+            <li key={d.slug}>
+              <Link
+                href={`/docs/${d.slug}`}
+                className={`block rounded-md px-2 py-1.5 text-sm ${
+                  d.slug === docSlug
+                    ? 'bg-[var(--color-bg-elevated)] text-[var(--color-accent)]'
+                    : 'text-[var(--color-text-secondary)]'
+                }`}
+              >
+                {d.frontmatter.title}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </details>
+
+      <div className="flex gap-10">
+        <aside className="sticky top-24 hidden h-fit w-64 shrink-0 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)] p-4 md:block">
           <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
             Documentation
           </p>
@@ -61,10 +105,10 @@ export default async function DocsPage({ params }: { params: Promise<{ slug?: st
               <li key={d.slug}>
                 <Link
                   href={`/docs/${d.slug}`}
-                  className={`block rounded px-2 py-1.5 text-sm transition-colors ${
+                  className={`block rounded-md px-2 py-1.5 text-sm transition-colors ${
                     d.slug === docSlug
-                      ? 'bg-[var(--color-bg-elevated)] text-[var(--color-text-primary)]'
-                      : 'text-[var(--color-text-secondary)] hover:text-[var(--color-accent)]'
+                      ? 'bg-[var(--color-bg-elevated)] text-[var(--color-accent)]'
+                      : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'
                   }`}
                 >
                   {d.frontmatter.title}
@@ -72,13 +116,39 @@ export default async function DocsPage({ params }: { params: Promise<{ slug?: st
               </li>
             ))}
           </ul>
-        </nav>
+        </aside>
 
-        <article className="min-w-0 flex-1 prose prose-invert max-w-none prose-headings:text-[var(--color-text-primary)] prose-p:text-[var(--color-text-secondary)] prose-a:text-[var(--color-accent)] prose-strong:text-[var(--color-text-primary)] prose-code:text-[var(--color-accent)] prose-li:text-[var(--color-text-secondary)] prose-th:text-[var(--color-text-primary)] prose-td:text-[var(--color-text-secondary)]">
-          <h1 className="mb-2 text-3xl font-bold text-[var(--color-text-primary)]">
-            {doc.frontmatter.title}
-          </h1>
+        <article className="min-w-0 flex-1 max-w-[78ch] prose prose-invert prose-headings:tracking-tight prose-headings:text-[var(--color-text-primary)] prose-p:leading-8 prose-p:text-[var(--color-text-secondary)] prose-a:text-[var(--color-accent)] prose-strong:text-[var(--color-text-primary)] prose-code:text-[var(--color-accent)] prose-li:text-[var(--color-text-secondary)] prose-th:text-[var(--color-text-primary)] prose-td:text-[var(--color-text-secondary)]">
           <ReactMarkdown remarkPlugins={[remarkGfm]}>{doc.content}</ReactMarkdown>
+
+          <footer className="mt-12 grid gap-3 border-t border-[var(--color-border)] pt-6 text-sm sm:grid-cols-2">
+            {prevDoc ? (
+              <Link
+                href={`/docs/${prevDoc.slug}`}
+                className="rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-secondary)] p-3 text-[var(--color-text-secondary)] transition-colors hover:text-[var(--color-text-primary)]"
+              >
+                <span className="mb-1 block text-xs uppercase tracking-wide text-[var(--color-text-muted)]">
+                  Previous
+                </span>
+                {prevDoc.frontmatter.title}
+              </Link>
+            ) : (
+              <div />
+            )}
+            {nextDoc ? (
+              <Link
+                href={`/docs/${nextDoc.slug}`}
+                className="rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-secondary)] p-3 text-[var(--color-text-secondary)] transition-colors hover:text-[var(--color-text-primary)]"
+              >
+                <span className="mb-1 block text-xs uppercase tracking-wide text-[var(--color-text-muted)]">
+                  Next
+                </span>
+                {nextDoc.frontmatter.title}
+              </Link>
+            ) : (
+              <div />
+            )}
+          </footer>
         </article>
       </div>
     </div>
