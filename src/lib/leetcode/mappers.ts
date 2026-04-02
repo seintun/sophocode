@@ -109,13 +109,21 @@ export interface ParsedExample {
 }
 
 function decodeHtmlEntities(text: string): string {
-  return text
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&amp;/g, '&')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&nbsp;/g, ' ');
+  let decoded = text;
+  for (let i = 0; i < 3; i++) {
+    const next = decoded
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&amp;/g, '&')
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
+      .replace(/&nbsp;/g, ' ');
+
+    if (next === decoded) break;
+    decoded = next;
+  }
+
+  return decoded;
 }
 
 /**
@@ -263,10 +271,71 @@ export function normalizePythonStarterCode(code: string): string {
   const rawCode = code.trimEnd();
   if (!rawCode) return '';
 
-  const typingSymbols = ['List', 'Optional', 'Dict', 'Set', 'Tuple', 'Any'];
-  const usedSymbols = typingSymbols.filter((symbol) => new RegExp(`\\b${symbol}\\b`).test(rawCode));
+  const lines = rawCode.split('\n');
+  const classIndex = lines.findIndex((line) => /^\s*class\s+Solution\s*:\s*$/.test(line));
+  let normalizedCode = rawCode;
 
-  const typingImportMatch = rawCode.match(/^from\s+typing\s+import\s+([^\n]+)$/m);
+  if (classIndex >= 0) {
+    const classIndent = lines[classIndex].match(/^\s*/)?.[0].length ?? 0;
+    let methodIndex = -1;
+    let methodMatch: RegExpMatchArray | null = null;
+
+    for (let i = classIndex + 1; i < lines.length; i++) {
+      if (lines[i].trim() === '') continue;
+      const indent = lines[i].match(/^\s*/)?.[0].length ?? 0;
+      if (indent <= classIndent) break;
+
+      const match = lines[i].match(
+        /^(\s*)def\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\(([^)]*)\)\s*(?:->\s*([^:]+))?\s*:\s*$/,
+      );
+      if (match) {
+        methodIndex = i;
+        methodMatch = match;
+        break;
+      }
+    }
+
+    if (methodIndex >= 0 && methodMatch) {
+      const methodIndent = methodMatch[1].length;
+      const methodName = methodMatch[2];
+      const rawParams = methodMatch[3]
+        .split(',')
+        .map((item) => item.trim())
+        .filter(Boolean);
+      const params =
+        rawParams[0] === 'self' || rawParams[0] === 'cls' ? rawParams.slice(1) : rawParams;
+      const returnType = methodMatch[4]?.trim();
+
+      let bodyEnd = methodIndex + 1;
+      for (; bodyEnd < lines.length; bodyEnd++) {
+        const line = lines[bodyEnd];
+        if (line.trim() === '') continue;
+        const indent = line.match(/^\s*/)?.[0].length ?? 0;
+        if (indent <= methodIndent) break;
+      }
+
+      const methodBody = lines
+        .slice(methodIndex + 1, bodyEnd)
+        .map((line) => (line.trim() === '' ? '' : line.slice(Math.min(methodIndent, line.length))));
+
+      const usableBody = methodBody.some((line) => line.trim() !== '') ? methodBody : ['    pass'];
+
+      const prefix = lines.slice(0, classIndex).filter((line, index, arr) => {
+        if (line.trim() !== '') return true;
+        return arr.slice(index + 1).some((remaining) => remaining.trim() !== '');
+      });
+      const signature = `def ${methodName}(${params.join(', ')})${returnType ? ` -> ${returnType}` : ''}:`;
+
+      normalizedCode = [...prefix, signature, ...usableBody].join('\n').trim();
+    }
+  }
+
+  const typingSymbols = ['List', 'Optional', 'Dict', 'Set', 'Tuple', 'Any'];
+  const usedSymbols = typingSymbols.filter((symbol) =>
+    new RegExp(`\\b${symbol}\\b`).test(normalizedCode),
+  );
+
+  const typingImportMatch = normalizedCode.match(/^from\s+typing\s+import\s+([^\n]+)$/m);
   const importedSymbols = typingImportMatch
     ? typingImportMatch[1]
         .split(',')
@@ -275,7 +344,7 @@ export function normalizePythonStarterCode(code: string): string {
     : [];
   const missingSymbols = usedSymbols.filter((symbol) => !importedSymbols.includes(symbol));
 
-  let normalized = rawCode;
+  let normalized = normalizedCode;
   if (missingSymbols.length > 0) {
     if (typingImportMatch) {
       const merged = Array.from(new Set([...importedSymbols, ...missingSymbols])).sort();
@@ -288,33 +357,35 @@ export function normalizePythonStarterCode(code: string): string {
     }
   }
 
-  const lines = normalized.split('\n');
-  for (let i = 0; i < lines.length; i++) {
-    const match = lines[i].match(
+  const normalizedLines = normalized.split('\n');
+  for (let i = 0; i < normalizedLines.length; i++) {
+    const match = normalizedLines[i].match(
       /^(\s*)def\s+[a-zA-Z_][a-zA-Z0-9_]*\s*\(.*\)\s*(?:->\s*[^:]+)?\s*:\s*$/,
     );
     if (!match) continue;
 
     const currentIndent = match[1].length;
     let nextContentIndex = -1;
-    for (let j = i + 1; j < lines.length; j++) {
-      if (lines[j].trim() !== '') {
+    for (let j = i + 1; j < normalizedLines.length; j++) {
+      if (normalizedLines[j].trim() !== '') {
         nextContentIndex = j;
         break;
       }
     }
 
     const nextIndent =
-      nextContentIndex === -1 ? -1 : (lines[nextContentIndex].match(/^\s*/)?.[0].length ?? 0);
+      nextContentIndex === -1
+        ? -1
+        : (normalizedLines[nextContentIndex].match(/^\s*/)?.[0].length ?? 0);
     const needsPass = nextContentIndex === -1 || nextIndent <= currentIndent;
 
     if (needsPass) {
-      lines.splice(i + 1, 0, `${match[1]}    pass`);
+      normalizedLines.splice(i + 1, 0, `${match[1]}    pass`);
       i++;
     }
   }
 
-  return lines.join('\n');
+  return normalizedLines.join('\n');
 }
 
 export function getPythonStarterCode(snippets: Array<{ langSlug: string; code: string }>): string {

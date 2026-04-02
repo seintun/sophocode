@@ -285,8 +285,8 @@ SELECT indexname
 FROM pg_indexes
 WHERE schemaname = 'public'
   AND indexname IN (
-    'Problem_title_trgm_idx',
-    'Problem_statement_trgm_idx',
+    'problem_title_trgm',
+    'problem_statement_trgm',
     'Session_guestId_problemId_startedAt_idx',
     'TestCase_problemId_isHidden_order_idx',
     'ProblemHint_problemId_source_idx'

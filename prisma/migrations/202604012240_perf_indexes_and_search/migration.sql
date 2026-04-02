@@ -3,10 +3,10 @@
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
 -- Support ILIKE/fuzzy title/statement search in GET /api/problems
-CREATE INDEX IF NOT EXISTS "Problem_title_trgm_idx"
+CREATE INDEX IF NOT EXISTS "problem_title_trgm"
 ON "Problem" USING gin (title gin_trgm_ops);
 
-CREATE INDEX IF NOT EXISTS "Problem_statement_trgm_idx"
+CREATE INDEX IF NOT EXISTS "problem_statement_trgm"
 ON "Problem" USING gin (statement gin_trgm_ops);
 
 -- Support latest-session lookup per problem for a guest

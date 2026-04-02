@@ -14,7 +14,13 @@ import {
   buildExternalUrl,
 } from '../src/lib/leetcode/mappers';
 
-const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
+const databaseUrl = process.env.DATABASE_URL;
+if (!databaseUrl) {
+  console.error('DATABASE_URL environment variable is required.');
+  process.exit(1);
+}
+
+const adapter = new PrismaPg({ connectionString: databaseUrl });
 const prisma = new PrismaClient({ adapter });
 
 const DEFAULT_NEETCODE_150_LIST_URL =
@@ -108,7 +114,7 @@ async function importProblemBySlug(resolvedSlug: string, curatedOrder?: number):
   const leetcodeNumber = Number.isFinite(parsedFrontendId) ? parsedFrontendId : null;
   const externalUrl = buildExternalUrl(resolvedSlug);
 
-  const problem = await prisma.$transaction(async (tx) => {
+  await prisma.$transaction(async (tx) => {
     // Upsert problem
     const upserted = await tx.problem.upsert({
       where: { slug: resolvedSlug },
@@ -144,7 +150,7 @@ async function importProblemBySlug(resolvedSlug: string, curatedOrder?: number):
       },
     });
 
-    console.log(`  ✓ Problem upserted: ${problem.id}`);
+    console.log(`  ✓ Problem upserted: ${upserted.id}`);
 
     // Replace visible test cases from examples in bulk.
     await tx.testCase.deleteMany({

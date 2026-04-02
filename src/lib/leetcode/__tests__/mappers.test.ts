@@ -84,6 +84,8 @@ describe('getPythonStarterCode', () => {
 
     expect(result).toContain('from typing import List');
     expect(result).toContain('def kClosest');
+    expect(result).not.toContain('class Solution');
+    expect(result).toContain('def kClosest(points: List[List[int]], k: int) -> List[List[int]]:');
   });
 
   it('inserts pass when method body is missing', () => {
@@ -92,7 +94,7 @@ describe('getPythonStarterCode', () => {
     const result = getPythonStarterCode([{ langSlug: 'python3', code }]);
 
     expect(result).toContain('def kClosest');
-    expect(result).toContain('\n        pass');
+    expect(result).toContain('\n    pass');
   });
 
   it('does not duplicate typing imports when List is already imported', () => {
