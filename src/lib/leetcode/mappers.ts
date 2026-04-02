@@ -107,6 +107,16 @@ export interface ParsedExample {
   explanation?: string;
 }
 
+function decodeHtmlEntities(text: string): string {
+  return text
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&nbsp;/g, ' ');
+}
+
 /**
  * Extract examples from LeetCode HTML content.
  * LeetCode content is HTML with example blocks.
@@ -126,18 +136,23 @@ export function extractExamples(content: string): ParsedExample[] {
       .replace(/<em>|<\/em>/gi, '')
       .replace(/<br\s*\/?>/gi, '\n')
       .replace(/<[^>]+>/g, '')
+      .replace(/&nbsp;/g, ' ')
       .trim();
 
     // Try to extract Input/Output from the text
     const inputMatch = text.match(/Input[:\s]*([\s\S]*?)(?=Output|$)/i);
-    const outputMatch = text.match(/Output[:\s]*([\s\S]*?)(?=Explanation|$)/i);
-    const explanationMatch = text.match(/Explanation[:\s]*([\s\S]*?)$/i);
+    const outputMatch = text.match(
+      /Output[:\s]*([\s\S]*?)(?=Explanation|Constraints|Follow-up|Note|$)/i,
+    );
+    const explanationMatch = text.match(
+      /Explanation[:\s]*([\s\S]*?)(?=\n\s*(?:Constraints|Follow-up|Note|Example\s*\d*\s*:?)|$)/i,
+    );
 
     if (inputMatch && outputMatch) {
       examples.push({
-        input: inputMatch[1].trim(),
-        output: outputMatch[1].trim(),
-        explanation: explanationMatch?.[1].trim() || undefined,
+        input: decodeHtmlEntities(inputMatch[1]).trim(),
+        output: decodeHtmlEntities(outputMatch[1]).trim(),
+        explanation: decodeHtmlEntities(explanationMatch?.[1] || '').trim() || undefined,
       });
     }
   }
@@ -147,24 +162,24 @@ export function extractExamples(content: string): ParsedExample[] {
     const plainText = content
       .replace(/<br\s*\/?>/gi, '\n')
       .replace(/<[^>]+>/g, '')
-      .replace(/&lt;/g, '<')
-      .replace(/&gt;/g, '>')
-      .replace(/&amp;/g, '&')
-      .replace(/&quot;/g, '"')
-      .replace(/&#39;/g, "'");
+      .replace(/&nbsp;/g, ' ');
 
     const exampleRegex = /Example\s*\d*[:\s]*\n([\s\S]*?)(?=Example\s*\d*[:\s]*\n|$)/gi;
     let match;
     while ((match = exampleRegex.exec(plainText)) !== null) {
       const section = match[1];
       const inp = section.match(/Input[:\s]*([\s\S]*?)(?=\nOutput)/i);
-      const out = section.match(/Output[:\s]*([\s\S]*?)(?=\nExplanation|\nExample|$)/i);
-      const exp = section.match(/Explanation[:\s]*([\s\S]*?)$/i);
+      const out = section.match(
+        /Output[:\s]*([\s\S]*?)(?=\nExplanation|\nConstraints|\nFollow-up|\nNote|\nExample|$)/i,
+      );
+      const exp = section.match(
+        /Explanation[:\s]*([\s\S]*?)(?=\n\s*(?:Constraints|Follow-up|Note|Example\s*\d*\s*:?)|$)/i,
+      );
       if (inp && out) {
         examples.push({
-          input: inp[1].trim(),
-          output: out[1].trim(),
-          explanation: exp?.[1].trim() || undefined,
+          input: decodeHtmlEntities(inp[1]).trim(),
+          output: decodeHtmlEntities(out[1]).trim(),
+          explanation: decodeHtmlEntities(exp?.[1] || '').trim() || undefined,
         });
       }
     }
@@ -178,8 +193,29 @@ export function extractExamples(content: string): ParsedExample[] {
  * Strips examples and constraints sections.
  */
 export function extractStatement(content: string): string {
+  const sectionMarkers = [
+    /<strong[^>]*>\s*Example\s*\d*\s*:?\s*<\/strong>/i,
+    /<strong[^>]*>\s*Constraints\s*:?\s*<\/strong>/i,
+    /<h\d[^>]*>\s*Example\s*\d*\s*:?\s*<\/h\d>/i,
+    /<h\d[^>]*>\s*Constraints\s*:?\s*<\/h\d>/i,
+  ];
+
+  let trimmedContent = content;
+  let cutIndex = -1;
+  for (const marker of sectionMarkers) {
+    const match = marker.exec(content);
+    if (!match) continue;
+    if (cutIndex === -1 || match.index < cutIndex) {
+      cutIndex = match.index;
+    }
+  }
+
+  if (cutIndex >= 0) {
+    trimmedContent = content.slice(0, cutIndex);
+  }
+
   // Convert HTML to rough markdown
-  const md = content
+  const md = trimmedContent
     .replace(/<pre>[\s\S]*?<\/pre>/gi, '') // Remove example blocks
     .replace(/<p>/gi, '\n\n')
     .replace(/<\/p>/gi, '')
@@ -192,15 +228,28 @@ export function extractStatement(content: string): string {
     .replace(/<li>/gi, '- ')
     .replace(/<\/li>/gi, '\n')
     .replace(/<[^>]+>/g, '')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&amp;/g, '&')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
+    .replace(/&nbsp;/g, ' ')
+    .replace(/\bExample\s*\d*\s*:\s*/gi, '')
+    .replace(/\bConstraints\s*:\s*/gi, '')
     .replace(/\n{3,}/g, '\n\n')
     .trim();
 
-  return md;
+  return decodeHtmlEntities(md);
+}
+
+export function extractConstraints(content: string): string[] {
+  const constraintsSectionMatch = content.match(
+    /<strong>\s*Constraints:\s*<\/strong>([\s\S]*?)(?:<strong>|<\/div>|$)/i,
+  );
+
+  const section = constraintsSectionMatch?.[1] ?? content;
+  const listItems = Array.from(section.matchAll(/<li>([\s\S]*?)<\/li>/gi)).map((match) =>
+    decodeHtmlEntities(match[1])
+      .replace(/<[^>]+>/g, '')
+      .trim(),
+  );
+
+  return listItems.filter(Boolean);
 }
 
 /**
