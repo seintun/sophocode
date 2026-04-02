@@ -30,11 +30,14 @@
 
 ### Blog
 
-| Post                                                                    | Slug                        | Target Keywords                                                  | Published  |
-| ----------------------------------------------------------------------- | --------------------------- | ---------------------------------------------------------------- | ---------- |
-| 14 Coding Interview Patterns You Need to Master                         | `14-coding-patterns`        | coding interview patterns, leetcode patterns, algorithm patterns | 2026-03-01 |
-| Clarify, Plan, Code, Reflect: The Interview Process That Actually Works | `clarify-plan-code-reflect` | clarify plan code reflect, coding interview process              | 2026-03-10 |
-| Why Progressive Hints Beat Solutions (And How to Use Them)              | `progressive-hints`         | progressive hints, productive struggle, spaced repetition coding | 2026-03-18 |
+Current publishing set includes a 12-month archive with 24 posts (roughly 2/month) across:
+
+- Pattern deep dives (Two Pointers, Sliding Window, Hash Maps, Binary Search, Graphs, DP, Heaps, Intervals, Prefix Sum, Greedy, Linked Lists, Backtracking)
+- Interview process and communication (mock self-review, debugging under pressure, narration frameworks)
+- Learning systems (90-day prep planning, burnout-resistant pacing, year-end reset)
+- Complexity literacy (Big-O in interviews, time/space trade-offs)
+
+**Cadence target:** maintain at least 2 high-quality posts per month with pattern-linked "Practice next" sections that route into `/practice?pattern=<PATTERN_ENUM>` plus roadmap/dashboard follow-through.
 
 ### Docs
 
@@ -55,13 +58,13 @@ Each post targets a specific pattern keyword. Planned structure:
 - Common variations and edge cases
 - Link to sophocode problems in that pattern
 
-| Post                                        | Target Keyword                  | Status      |
-| ------------------------------------------- | ------------------------------- | ----------- |
-| Sliding Window Pattern: Complete Guide      | sliding window pattern leetcode | Not started |
-| Two Pointers Pattern: When and How          | two pointers interview          | Not started |
-| Dynamic Programming Patterns: 5 Types       | dynamic programming patterns    | Not started |
-| BFS vs DFS: When to Use Each                | bfs vs dfs interview            | Not started |
-| Binary Search Pattern: Beyond Sorted Arrays | binary search variations        | Not started |
+| Post Cluster                                 | Target Keyword Set                             | Status      |
+| -------------------------------------------- | ---------------------------------------------- | ----------- |
+| Sliding Window + Two Pointers                | sliding window pattern, two pointers interview | Published   |
+| Dynamic Programming + Binary Search          | dynamic programming patterns, answer-space BS  | Published   |
+| Graphs + Heaps + Intervals                   | graph interview prep, heap patterns, intervals | Published   |
+| Prefix Sum + Greedy                          | prefix sum interview, greedy algorithms        | Published   |
+| Additional pattern expansions (Trees, Tries) | tree traversal interview, trie problems        | In planning |
 
 ### Priority 2 — Process + Learning Content
 
@@ -88,6 +91,7 @@ These target users comparing tools:
 2. **Pattern deep-dive posts** should link to each other (Sliding Window ↔ Two Pointers)
 3. **The docs getting-started page** should link to the top 3 recommended first problems
 4. **The blog index** feeds naturally from `/` — add a "Latest from the blog" section to the landing page when there are 5+ posts
+5. Include links to recommendation and roadmap surfaces when relevant (`/dashboard`, `/roadmap`) to reflect the current adaptive practice loop
 
 ---
 

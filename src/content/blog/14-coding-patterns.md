@@ -141,3 +141,12 @@ When you see a new problem, run through this checklist:
 The goal isn't to memorize these — it's to internalize the _shape_ of problems that each pattern solves. After you solve 3-5 problems in each category, the pattern recognition becomes automatic.
 
 That's what sophocode is built for: deliberate practice by pattern, with an AI coach that explains _why_ each approach works.
+
+## Practice next
+
+- Start with the [Arrays & Strings practice set](/practice?pattern=ARRAYS_STRINGS).
+- Track which patterns are lagging in your [dashboard](/dashboard), then sequence the next block in your [roadmap](/roadmap).
+- SophoCode picks:
+  - [Two Sum fundamentals](/practice/two-sum)
+  - [Longest Substring Without Repeating Characters](/practice/longest-substring-without-repeating-characters)
+  - [Merge Intervals recognition drills](/practice/merge-intervals)

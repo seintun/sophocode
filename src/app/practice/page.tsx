@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { Suspense } from 'react';
 import ProblemList from '@/components/domain/ProblemList';
 
 export const metadata: Metadata = {
@@ -15,5 +16,15 @@ export const metadata: Metadata = {
 };
 
 export default function PracticePage() {
-  return <ProblemList />;
+  return (
+    <Suspense
+      fallback={
+        <div className="mx-auto max-w-6xl px-4 py-16 text-sm text-[var(--color-text-muted)]">
+          Loading practice workspace...
+        </div>
+      }
+    >
+      <ProblemList />
+    </Suspense>
+  );
 }

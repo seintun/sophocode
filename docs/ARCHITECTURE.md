@@ -27,7 +27,7 @@ graph TB
         UI["React 19 UI"]
         Monaco["Monaco Editor"]
         Pyodide["Pyodide WASM Worker"]
-        LocalStorage["localStorage\n(guest UUID)"]
+        GuestCookie["httpOnly cookie\n(sophocode_guest)"]
     end
 
     subgraph "Next.js on Vercel"
@@ -48,7 +48,7 @@ graph TB
 
     UI --> Monaco
     UI --> Pyodide
-    UI --> LocalStorage
+    UI --> GuestCookie
     UI --> AppRouter
     AppRouter --> Middleware
     AppRouter --> AIRoutes
@@ -148,7 +148,7 @@ sophocode/
 │   │   ├── useCodeExecution.ts    # Pyodide run orchestration
 │   │   ├── useAIChat.ts           # AI streaming chat state
 │   │   ├── useKeyboardShortcuts.ts
-│   │   └── useGuestId.ts          # Guest UUID from localStorage
+│   │   └── useFloatingSophia.ts    # Behavioral nudges and avatar assistant cues
 │   ├── lib/
 │   │   ├── ai/
 │   │   │   ├── provider.ts        # OpenRouter client config
@@ -160,23 +160,23 @@ sophocode/
 │   │   │       ├── interviewer.ts
 │   │   │       └── summary.ts
 │   │   ├── auth/
-│   │   │   └── migration.ts       # Guest-to-user data migration
+│   │   │   └── migrate.ts         # Guest-to-user data migration helper
 │   │   ├── db/
-│   │   │   └── index.ts           # Prisma singleton
+│   │   │   └── prisma.ts          # Prisma singleton
 │   │   ├── errors/
-│   │   │   └── index.ts           # handleApiError, withErrorHandling
+│   │   │   └── api.ts             # handleApiError and API guard wrappers
 │   │   ├── execution/
 │   │   │   └── runner.ts          # Pyodide Worker interface wrapper
 │   │   ├── supabase/
-│   │   │   ├── browser.ts         # Browser Supabase client
+│   │   │   ├── client.ts          # Browser Supabase client
 │   │   │   ├── server.ts          # Server Supabase client (RSC/API routes)
 │   │   │   └── middleware.ts      # Session refresh helper
 │   │   ├── mastery.ts             # State machine + spaced repetition logic
-│   │   ├── guest.ts               # Guest UUID read/write (localStorage)
+│   │   ├── guest.ts               # Guest cookie helpers
 │   │   └── utils.ts               # cn() — clsx + tailwind-merge
 │   ├── types/                     # Shared domain types
 │   │   └── index.ts               # Problem, Session, MasteryState, etc.
-│   └── middleware.ts              # Next.js middleware — Supabase session refresh
+│   └── proxy.ts                   # Next.js proxy — CSP, guest cookie, premium gating
 ├── tests/
 │   └── e2e/                       # Playwright E2E specs
 ├── ARCHITECTURE.md                # Concise overview (links to docs/)
@@ -194,9 +194,9 @@ sophocode/
 
 ### 4.1 Guest-First Authentication
 
-Users can start practicing immediately with no account required. A random UUID is generated on first visit and persisted in `localStorage` (`src/lib/guest.ts`). This UUID is sent as a header on all API calls, associating sessions, runs, and progress with the guest.
+Users can start practicing immediately with no account required. A random guest ID is generated and set as an httpOnly cookie (`sophocode_guest`) in `src/proxy.ts`. API routes read guest identity server-side and associate sessions/progress with that guest ID.
 
-When a user chooses to sign up (GitHub or Google OAuth via Supabase), the migration function in `src/lib/auth/migration.ts` reassigns all records from the guest UUID to the new authenticated user ID. This is a one-time, server-side operation triggered at the end of the OAuth callback.
+When a user signs in (GitHub or Google OAuth via Supabase), `src/lib/auth/migrate.ts` currently migrates records with `userId = null` to the authenticated user. This behavior is not guest-cookie scoped yet and should be tightened in a follow-up.
 
 **Why:** Removes the biggest drop-off point in practice tools — the sign-up wall. Users build momentum before being asked to commit.
 
@@ -225,10 +225,10 @@ Prisma v7 introduces a new configuration model. The database URL and adapter are
 
 For edge-compatible connection pooling, the stack uses `@prisma/adapter-pg` with `@prisma/pg-worker`. This allows the Prisma client to function correctly in Vercel's serverless and edge runtime environments without exhausting Postgres connection limits.
 
-A singleton pattern in `src/lib/db/index.ts` prevents multiple Prisma client instances from being created during hot reloads in development.
+A singleton pattern in `src/lib/db/prisma.ts` prevents multiple Prisma client instances from being created during hot reloads in development.
 
 ```ts
-// src/lib/db/index.ts — singleton pattern
+// src/lib/db/prisma.ts — singleton pattern
 const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
 export const prisma = globalForPrisma.prisma ?? new PrismaClient();
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
@@ -411,9 +411,9 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    A["First Visit"] --> B{"localStorage\nguest_id exists?"}
-    B -->|"No"| C["Generate UUID\nStore in localStorage"]
-    B -->|"Yes"| D["Use existing guest UUID"]
+    A["First Visit"] --> B{"sophocode_guest\ncookie exists?"}
+    B -->|"No"| C["Generate guest ID\nSet httpOnly cookie"]
+    B -->|"Yes"| D["Use existing guest cookie"]
     C --> D
 
     D --> E["Practice as Guest\n(sessions tied to UUID)"]
@@ -421,7 +421,7 @@ flowchart TD
     F -->|"No"| E
     F -->|"Yes"| G["Supabase OAuth\n(GitHub / Google)"]
     G --> H["OAuth Callback\n/auth/callback"]
-    H --> I["migration.ts\nReassign guest records → user ID"]
+    H --> I["migrate.ts\nLink guest activity to user"]
     I --> J["Authenticated Session\n(Supabase JWT cookie)"]
     J --> K["Continue practicing\n(all history preserved)"]
 
@@ -431,10 +431,9 @@ flowchart TD
 
 **Implementation details:**
 
-- `useGuestId` hook reads/writes the UUID from `localStorage`. The UUID is sent as `X-Guest-Id` header on API calls.
+- Guest identity is created/read in proxy + cookie helpers (`src/proxy.ts`, `src/lib/guest.ts`) and is not exposed to client JS.
 - API routes check for an authenticated Supabase session first, falling back to the guest header. Records are stored with either a `userId` (authenticated) or `guestId` (anonymous).
-- The migration in `src/lib/auth/migration.ts` runs a batch update inside a Prisma transaction: `UPDATE sessions SET user_id = $newUserId WHERE guest_id = $guestId`.
-- After migration, the guest UUID is cleared from `localStorage`.
+- Migration helper lives at `src/lib/auth/migrate.ts` and runs server-side only.
 
 ---
 
@@ -512,7 +511,7 @@ export async function POST(req: Request) {
 **What to unit test:**
 
 - `src/lib/mastery.ts` — state machine transitions (pure functions, high value)
-- `src/lib/guest.ts` — localStorage read/write
+- `src/lib/guest.ts` — guest cookie generation/read helpers
 - `src/lib/ai/prompts/` — prompt builder output (snapshot or string assertions)
 - `src/lib/errors/` — error classification and response shaping
 - `src/components/ui/` — primitive component rendering and prop behavior
@@ -625,17 +624,13 @@ flowchart LR
 
 ### 10.3 Pre-release Mode
 
-The project is currently in **beta pre-release** mode (`0.1.0-beta.x`). This means:
-
-- Version bumps produce `0.1.0-beta.1`, `0.1.0-beta.2`, etc.
-- Pre-release mode is configured in `.changeset/pre.json`
-- To exit pre-release: `bun changeset pre exit`
+The project currently versions through standard Changesets release flow on the `0.2.x` line.
 
 ### 10.4 Change Types
 
-| Type     | When to use                                        | Version bump                    |
-| -------- | -------------------------------------------------- | ------------------------------- |
-| `patch`  | Bug fixes, internal refactors, dependency updates  | `0.1.0-beta.1` → `0.1.0-beta.2` |
-| `minor`  | New features, new AI prompts, new problem patterns | `0.1.0-beta.1` → `0.1.1-beta.0` |
-| `major`  | Breaking API changes, auth model changes           | `0.1.0-beta.1` → `1.0.0-beta.0` |
-| _(none)_ | Docs, CI config, test-only changes                 | Use `skip-changeset` label      |
+| Type     | When to use                                        | Version bump               |
+| -------- | -------------------------------------------------- | -------------------------- |
+| `patch`  | Bug fixes, internal refactors, dependency updates  | `0.2.0` → `0.2.1`          |
+| `minor`  | New features, new AI prompts, new problem patterns | `0.2.0` → `0.3.0`          |
+| `major`  | Breaking API changes, auth model changes           | `0.2.0` → `1.0.0`          |
+| _(none)_ | Docs, CI config, test-only changes                 | Use `skip-changeset` label |

@@ -10,7 +10,7 @@ graph TB
         UI["React 19 UI"]
         Monaco["Monaco Editor"]
         Pyodide["Pyodide WASM Worker"]
-        LocalStorage["localStorage\n(guest UUID)"]
+        GuestCookie["httpOnly cookie\n(sophocode_guest)"]
     end
 
     subgraph "Next.js on Vercel"
@@ -31,7 +31,7 @@ graph TB
 
     UI --> Monaco
     UI --> Pyodide
-    UI --> LocalStorage
+    UI --> GuestCookie
     UI --> AppRouter
     AppRouter --> Middleware
     AppRouter --> AIRoutes
@@ -62,7 +62,7 @@ graph TB
 
 ## Key Concepts
 
-- **Guest-first auth** — UUID in localStorage, migrated to Supabase user on sign-up.
+- **Guest-first auth** — anonymous identity via httpOnly cookie managed in `src/proxy.ts`.
 - **Pyodide WASM** — Python runs in a Web Worker at `public/pyodide-worker.js`, wrapper at `src/lib/execution/runner.ts`.
 - **Prisma 7 config** — DB URL in `prisma.config.ts` (not `schema.prisma`). Common gotcha.
 - **Spaced repetition** — 4-state mastery machine: UNSEEN → IN_PROGRESS → MASTERED → NEEDS_REFRESH.
@@ -92,4 +92,4 @@ graph TB
 
 ## Versioning
 
-Changesets-based. Currently in **beta pre-release** (`0.1.0-beta.x`). Every user-facing PR needs a changeset file. See [CONTRIBUTING.md](.github/CONTRIBUTING.md) for the workflow.
+Changesets-based. Current package line is `0.2.x`. Every user-facing PR needs a changeset file. See [CONTRIBUTING.md](.github/CONTRIBUTING.md) for the workflow.
