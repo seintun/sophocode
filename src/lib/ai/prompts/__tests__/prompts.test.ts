@@ -88,13 +88,13 @@ describe('buildHintPrompt', () => {
   });
 
   describe('Level 3', () => {
-    it('may contain pseudocode but not full solutions', () => {
+    it('forbids pseudocode and full solutions', () => {
       const result = buildHintPrompt({
         ...problemContext,
         currentCode: 'def two_sum(): pass',
         level: 3,
       });
-      expect(result.system.toLowerCase()).toMatch(/pseudocode|code fragments/);
+      expect(result.system.toLowerCase()).toContain('do not include pseudocode');
       expect(result.system.toLowerCase()).toContain('do not provide the complete');
     });
   });
@@ -141,6 +141,34 @@ describe('buildCoachPrompt', () => {
   it('forbids full solution code', () => {
     const result = buildCoachPrompt(problemContext);
     expect(result.system.toLowerCase()).toContain('never provide full solution code');
+    expect(result.system.toLowerCase()).toContain('never provide pseudocode');
+  });
+
+  it('enforces concise response format for readability', () => {
+    const result = buildCoachPrompt(problemContext);
+    const lower = result.system.toLowerCase();
+    expect(lower).toContain('max 120 words');
+    expect(lower).toContain('max 4 bullets');
+    expect(lower).toContain('short sections');
+    expect(lower).toContain('markdown');
+  });
+
+  it('keeps structure but avoids rigid repeated heading labels', () => {
+    const result = buildCoachPrompt(problemContext);
+    const lower = result.system.toLowerCase();
+    expect(lower).toContain('internally');
+    expect(lower).toContain('do not render fixed heading labels');
+    expect(lower).toContain('quick take');
+    expect(lower).toContain('what to fix');
+    expect(lower).toContain('try next');
+  });
+
+  it('applies concise markdown format in self-practice mode too', () => {
+    const result = buildCoachPrompt({ ...problemContext, sessionMode: 'SELF_PRACTICE' });
+    const lower = result.system.toLowerCase();
+    expect(lower).toContain('max 120 words');
+    expect(lower).toContain('markdown');
+    expect(lower).toContain('one focused next-step question');
   });
 
   it('mentions problem context', () => {
@@ -179,6 +207,24 @@ describe('buildInterviewerPrompt', () => {
     expect(result.system.toLowerCase()).toMatch(
       /problem understanding|approach selection|communication/,
     );
+  });
+
+  it('enforces concise interviewer replies', () => {
+    const result = buildInterviewerPrompt(problemContext);
+    const lower = result.system.toLowerCase();
+    expect(lower).toContain('max 90 words');
+    expect(lower).toContain('one primary question');
+    expect(lower).toContain('markdown');
+  });
+
+  it('keeps interviewer structure but avoids rigid heading labels', () => {
+    const result = buildInterviewerPrompt(problemContext);
+    const lower = result.system.toLowerCase();
+    expect(lower).toContain('internally');
+    expect(lower).toContain('do not render fixed heading labels');
+    expect(lower).toContain('signal');
+    expect(lower).toContain('concern');
+    expect(lower).toContain('question');
   });
 
   it('mentions problem context', () => {

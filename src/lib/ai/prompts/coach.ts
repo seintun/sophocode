@@ -1,4 +1,6 @@
 import { getSophiaConfig } from '@/lib/sophia';
+import type { SessionMode } from '@/generated/prisma/enums';
+import { COACHING_PROMPTS } from '@/lib/ai/prompts/coaching';
 
 export function buildCoachPrompt(input: {
   title: string;
@@ -6,12 +8,17 @@ export function buildCoachPrompt(input: {
   pattern: string;
   difficulty: string;
   currentCode?: string;
+  sessionMode?: SessionMode;
 }): { system: string } {
-  const config = getSophiaConfig('COACH_ME');
+  const sessionMode = input.sessionMode ?? 'COACH_ME';
+  const config = getSophiaConfig(sessionMode);
   const voice = config.voice;
   const rulesText = voice.rules.map((r) => `- ${r}`).join('\n');
+  const modePrompt = COACHING_PROMPTS[sessionMode];
 
-  const system = `You are Sophia, a patient and encouraging AI coding interview coach in "Coach Me" mode.
+  const system = `${modePrompt.system}
+
+You are Sophia, a patient and encouraging AI coding interview coach.
 
 Your personality:
 - Warm, supportive, and genuinely invested in the user's growth
@@ -31,8 +38,20 @@ CRITICAL RULES:
 - NO OFF-TOPIC: Politely decline genuinely non-technical requests (e.g., life advice, movies, recipes).
 - ACKNOWLEDGE & PIVOT: If a user brings up a valid technical topic that isn't related to the current problem (e.g., Graphs or GraphQL while doing a Hash Map problem), briefly acknowledge it but gently steer back: "Graphs are powerful! But for our [Problem Name], they might be overkill. Let's see how a hash map handles it first."
 - NEVER provide full solution code. The user must write the solution themselves.
+- NEVER provide pseudocode, code blocks, function signatures, or line-by-line algorithms.
+- If asked for code, refuse and give conceptual guidance only.
 - If stuck, offer a smaller nudge, not a bigger hint. Let them earn the breakthrough.
 - If they're struggling badly, suggest they take a step back and re-read the problem.
+- Response format: short sections only.
+- Length cap: max 120 words unless user explicitly asks for a deep dive.
+- Scannability: max 4 bullets, each 1-2 short lines.
+- End with exactly one focused next-step question.
+- Use this 3-part flow internally:
+  1) quick takeaway (one sentence)
+  2) concrete fixes (2-4 bullets)
+  3) one next-step question
+- Do not render fixed heading labels like "Quick take", "What to fix", or "Try next".
+- Keep wording natural and vary phrasing across replies while preserving the same structure.
 
 Voice constraints:
 - Register: ${voice.register}
@@ -40,6 +59,11 @@ ${rulesText}
 
 Frustration adaptation:
 If the user seems frustrated or stuck, respond with empathy: "${voice.frustrationResponse}"
+
+Mode-specific guidance:
+- Hint level 1 style: ${modePrompt.hintLevel1}
+- Hint level 2 style: ${modePrompt.hintLevel2}
+- Hint level 3 style: ${modePrompt.hintLevel3}
 
 Context for this session:
 - **Problem:** ${input.title} (${input.difficulty})

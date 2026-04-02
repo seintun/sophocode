@@ -524,6 +524,7 @@ function SessionContent({
 
   const handleAskAboutFailure = useCallback(
     (failedSummary: string) => {
+      window.dispatchEvent(new CustomEvent('sophia:open-coach'));
       workspaceRef.current?.openCoach();
       askAboutFailure(failedSummary);
     },
@@ -624,21 +625,9 @@ function SessionContent({
         hintStream={hintStream}
         onHintRequest={handleHintRequest}
         hintLevel={hintLevel}
-        onAskAboutFailure={hasFailures ? () => handleAskAboutFailure('') : undefined}
-        showFailureButton={hasFailures}
       />
     ),
-    [
-      session.mode,
-      messages,
-      sendChat,
-      aiLoading,
-      hintStream,
-      handleHintRequest,
-      hintLevel,
-      hasFailures,
-      handleAskAboutFailure,
-    ],
+    [session.mode, messages, sendChat, aiLoading, hintStream, handleHintRequest, hintLevel],
   );
 
   if (error) {

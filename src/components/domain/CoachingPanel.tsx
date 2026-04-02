@@ -10,6 +10,7 @@ import { HintLoader } from '@/components/ui/HintLoader';
 import { getSophiaConfig, SOPHIA_AVATAR } from '@/lib/sophia';
 import type { SessionMode } from '@/generated/prisma/enums';
 import type { UIMessage } from 'ai';
+import { sanitizeCoachingContent } from '@/lib/ai/safety';
 
 interface CoachingPanelProps {
   mode: SessionMode;
@@ -19,8 +20,6 @@ interface CoachingPanelProps {
   hintStream: { text: string; isLoading: boolean };
   onHintRequest: (level: number) => void;
   hintLevel: number;
-  onAskAboutFailure?: () => void;
-  showFailureButton?: boolean;
   onClose?: () => void;
 }
 
@@ -43,8 +42,6 @@ export function CoachingPanel({
   hintStream,
   onHintRequest,
   hintLevel,
-  onAskAboutFailure,
-  showFailureButton,
   onClose,
 }: CoachingPanelProps) {
   const [input, setInput] = useState('');
@@ -340,7 +337,12 @@ export function CoachingPanel({
                           </div>
                         )}
                         <StreamedMarkdownMessage
-                          content={text || (isStreamingActive ? '...' : '')}
+                          content={sanitizeCoachingContent(
+                            text || (isStreamingActive ? '...' : ''),
+                            {
+                              mode,
+                            },
+                          )}
                           accentColor={config.colors.primary}
                           isStreaming={isStreamingActive}
                           cursorColor={config.colors.primary}
@@ -401,7 +403,7 @@ export function CoachingPanel({
                   </div>
                   {hintStream.text ? (
                     <StreamedMarkdownMessage
-                      content={hintStream.text}
+                      content={sanitizeCoachingContent(hintStream.text, { mode })}
                       accentColor={config.colors.primary}
                       isStreaming={hintStream.isLoading}
                       cursorColor={config.colors.primary}
@@ -449,32 +451,6 @@ export function CoachingPanel({
                   {isHintOnCooldown
                     ? `Next hint in ${Math.floor(cooldownRemaining / 60)}:${String(cooldownRemaining % 60).padStart(2, '0')}`
                     : `Request Level ${nextHintLevel} Hint`}
-                </button>
-              )}
-              {showFailureButton && onAskAboutFailure && (
-                <button
-                  type="button"
-                  onClick={onAskAboutFailure}
-                  disabled={isLoading}
-                  aria-label="Ask Sophia why tests failed"
-                  className="error-cta-btn"
-                >
-                  <svg
-                    width="14"
-                    height="14"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    aria-hidden="true"
-                  >
-                    <circle cx="12" cy="12" r="10" />
-                    <line x1="12" y1="8" x2="12" y2="12" />
-                    <line x1="12" y1="16" x2="12.01" y2="16" />
-                  </svg>
-                  Why did this fail?
                 </button>
               )}
             </div>

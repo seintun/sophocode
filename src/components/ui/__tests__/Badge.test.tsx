@@ -41,9 +41,10 @@ describe('Badge', () => {
       expect(screen.getByText('UNSEEN')).toBeInTheDocument();
     });
 
-    it('renders MASTERED mastery state with green', () => {
+    it('renders MASTERED as subtle check mark badge', () => {
       render(<Badge variant="mastery" value="MASTERED" />);
-      const badge = screen.getByText('MASTERED');
+      const badge = screen.getByLabelText('Mastered');
+      expect(badge).toHaveTextContent('✓');
       expect(badge.className).toContain('--color-success');
     });
 

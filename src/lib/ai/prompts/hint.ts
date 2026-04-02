@@ -1,5 +1,6 @@
 import { getSophiaConfig, isSessionMode } from '@/lib/sophia';
 import type { SessionMode } from '@/lib/sophia';
+import { COACHING_PROMPTS } from '@/lib/ai/prompts/coaching';
 
 export function buildHintPrompt(input: {
   title: string;
@@ -10,7 +11,7 @@ export function buildHintPrompt(input: {
   level: 1 | 2 | 3;
   mode?: SessionMode;
 }): { system: string; user: string } {
-  const levelGuidance = getLevelGuidance(input.level);
+  const levelGuidance = getLevelGuidance(input.level, input.mode);
 
   const voiceLine =
     input.mode && isSessionMode(input.mode)
@@ -27,9 +28,10 @@ CRITICAL CONSTRAINTS:
 - NO OFF-TOPIC: Politely decline genuinely non-technical requests (e.g., life advice, movies, recipes).
 - ACKNOWLEDGE & PIVOT: If a user brings up a valid technical topic unrelated to the hint (e.g., GraphQL or Graphs), briefly acknowledge it but steer back: "Graphs are powerful! But for our [Problem Name], they might be overkill. Let's get back to the Level ${input.level} hint."
 - NEVER provide a full, runnable solution. The user must solve the problem themselves.
-- At Level 1 and 2, NEVER include code snippets, pseudocode, or implementation details.
-- At Level 3, you may include short pseudocode-style steps or small code fragments, but NEVER the complete solution function.
-- Always be encouraging. Frame hints as questions or gentle nudges when possible.`;
+- NEVER include code blocks, pseudocode, function signatures, or copy-pastable implementation.
+- At every level, use plain-language conceptual guidance only.
+- Always be encouraging. Frame hints as questions or gentle nudges when possible.
+- Use concise Markdown: short sections, max 4 bullets, and one next-step question.`;
 
   const testContext = input.testResults
     ? `\n**Test Results:** ${input.testResults.passed}/${input.testResults.total} tests passing.`
@@ -51,7 +53,16 @@ Give me a Level ${input.level} hint. Remember the constraints for this level.`;
   return { system, user };
 }
 
-function getLevelGuidance(level: 1 | 2 | 3): string {
+function getLevelGuidance(level: 1 | 2 | 3, mode?: SessionMode): string {
+  const modePrompt = mode ? COACHING_PROMPTS[mode] : COACHING_PROMPTS.SELF_PRACTICE;
+
+  const modeHint =
+    level === 1
+      ? modePrompt.hintLevel1
+      : level === 2
+        ? modePrompt.hintLevel2
+        : modePrompt.hintLevel3;
+
   switch (level) {
     case 1:
       return `You are providing a LEVEL 1 hint — the gentlest nudge.
@@ -61,7 +72,8 @@ Level 1 Rules:
 - Explain the "why" behind the pattern choice
 - Do NOT mention specific data structures by name beyond the pattern category
 - Do NOT outline steps or approaches
-- Do NOT include any code — not even pseudocode`;
+- Do NOT include any code — not even pseudocode
+- Mode emphasis: ${modeHint}`;
 
     case 2:
       return `You are providing a LEVEL 2 hint — approach outline.
@@ -70,15 +82,17 @@ Level 2 Rules:
 - Name the key data structures and the general approach (e.g., "You could iterate once, storing complements in a map")
 - Outline the high-level steps without implementation details
 - Do NOT include any code — not even pseudocode
-- Do NOT reveal the exact algorithm or edge case handling`;
+- Do NOT reveal the exact algorithm or edge case handling
+- Mode emphasis: ${modeHint}`;
 
     case 3:
       return `You are providing a LEVEL 3 hint — the most detailed guidance short of a full solution.
 
 Level 3 Rules:
-- Provide pseudocode-style steps that sketch the algorithm
-- You may include small code fragments (e.g., a key line or condition check)
+- Provide precise conceptual steps in plain language
+- Do NOT include pseudocode, code fragments, or function signatures
 - Do NOT provide the complete, runnable solution function
-- Focus on the tricky parts the user likely needs help with`;
+- Focus on the tricky parts the user likely needs help with
+- Mode emphasis: ${modeHint}`;
   }
 }
