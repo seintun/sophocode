@@ -51,6 +51,8 @@ model TestCase {
   updatedAt DateTime @updatedAt
 
   problem Problem @relation(fields: [problemId], references: [id], onDelete: Cascade)
+
+  @@index([problemId, isHidden, order])
 }
 
 model Session {
@@ -74,6 +76,7 @@ model Session {
   messages SessionMessage[]
 
   @@index([guestId])
+  @@index([guestId, problemId, startedAt(sort: Desc)])
   @@index([userId])
   @@index([problemId])
 }
@@ -112,6 +115,7 @@ model ProblemHint {
 
   @@unique([problemId, level])
   @@index([problemId])
+  @@index([problemId, source])
 }
 
 model SessionFeedback {

@@ -44,6 +44,8 @@ const TAG_TO_PATTERN: Record<string, Pattern> = {
 };
 
 export function mapLeetCodeTagsToPattern(tags: LeetCodeTopicTag[]): Pattern {
+  const tagSlugs = new Set(tags.map((tag) => tag.slug));
+
   // Priority order: specific patterns first, then generic
   const priorityOrder = [
     'sliding-window',
@@ -72,8 +74,7 @@ export function mapLeetCodeTagsToPattern(tags: LeetCodeTopicTag[]): Pattern {
   ];
 
   for (const slug of priorityOrder) {
-    const tag = tags.find((t) => t.slug === slug);
-    if (tag && TAG_TO_PATTERN[slug]) {
+    if (tagSlugs.has(slug) && TAG_TO_PATTERN[slug]) {
       return TAG_TO_PATTERN[slug];
     }
   }
@@ -238,11 +239,14 @@ export function extractStatement(content: string): string {
 }
 
 export function extractConstraints(content: string): string[] {
-  const constraintsSectionMatch = content.match(
-    /<strong>\s*Constraints:\s*<\/strong>([\s\S]*?)(?:<strong>|<\/div>|$)/i,
-  );
+  const markerRegex = /<(?:strong|h\d)[^>]*>\s*Constraints\s*:?\s*<\/(?:strong|h\d)>/i;
+  const markerMatch = markerRegex.exec(content);
 
-  const section = constraintsSectionMatch?.[1] ?? content;
+  if (!markerMatch) {
+    return [];
+  }
+
+  const section = content.slice(markerMatch.index + markerMatch[0].length);
   const listItems = Array.from(section.matchAll(/<li>([\s\S]*?)<\/li>/gi)).map((match) =>
     decodeHtmlEntities(match[1])
       .replace(/<[^>]+>/g, '')
