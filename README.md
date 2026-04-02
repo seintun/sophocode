@@ -4,7 +4,7 @@ AI-coached coding interview practice. Learn patterns, not just problems.
 
 **[sophoco.de](https://sophoco.de)** · [Architecture](ARCHITECTURE.md) · [Contributing](.github/CONTRIBUTING.md)
 
-> **Beta** (`0.2.x`) — APIs and data models may still evolve between commits.
+> **Beta** (`0.2.x`) — APIs and data models may still evolve between commits. We are preparing for a `v0.3.0` release soon.
 
 ---
 
