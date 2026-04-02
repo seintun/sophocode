@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { PrismaClient } from '@/generated/prisma/client';
 import type { Difficulty, Pattern, Prisma } from '@/generated/prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
+import { normalizePythonStarterCode } from '../src/lib/leetcode/mappers';
 
 type SeedExample = {
   input: string;
@@ -245,7 +246,7 @@ function parseSeedEntry(raw: unknown, index: number): SeedProblem | null {
     constraints: asStringArray(raw.constraints),
     statement: asString(raw.statement) ?? '',
     examples,
-    starterCode: asString(raw.starterCode) ?? '',
+    starterCode: normalizePythonStarterCode(asString(raw.starterCode) ?? ''),
     approaches: normalizeApproaches(raw.approaches),
     hints: asStringArray(raw.hints),
     externalUrl,

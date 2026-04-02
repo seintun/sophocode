@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { extractConstraints, extractExamples, extractStatement } from '../mappers';
+import {
+  extractConstraints,
+  extractExamples,
+  extractStatement,
+  getPythonStarterCode,
+} from '../mappers';
 
 describe('extractStatement', () => {
   it('removes example and constraints sections from statement markdown', () => {
@@ -68,5 +73,33 @@ describe('extractConstraints', () => {
     `;
 
     expect(extractConstraints(html)).toEqual(['1 <= n <= 100', 'n is odd.']);
+  });
+});
+
+describe('getPythonStarterCode', () => {
+  it('adds missing typing imports when snippet uses List annotations', () => {
+    const code = `class Solution:\n    def kClosest(self, points: List[List[int]], k: int) -> List[List[int]]:\n        pass`;
+
+    const result = getPythonStarterCode([{ langSlug: 'python3', code }]);
+
+    expect(result).toContain('from typing import List');
+    expect(result).toContain('def kClosest');
+  });
+
+  it('inserts pass when method body is missing', () => {
+    const code = `class Solution:\n    def kClosest(self, points: List[List[int]], k: int) -> List[List[int]]:`;
+
+    const result = getPythonStarterCode([{ langSlug: 'python3', code }]);
+
+    expect(result).toContain('def kClosest');
+    expect(result).toContain('\n        pass');
+  });
+
+  it('does not duplicate typing imports when List is already imported', () => {
+    const code = `from typing import List\n\nclass Solution:\n    def kClosest(self, points: List[List[int]], k: int) -> List[List[int]]:\n        pass`;
+
+    const result = getPythonStarterCode([{ langSlug: 'python3', code }]);
+
+    expect(result.match(/from typing import List/g)).toHaveLength(1);
   });
 });
