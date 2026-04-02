@@ -1,8 +1,9 @@
--- Create GIN trigram indexes without taking long write locks.
--- NOTE: CREATE INDEX CONCURRENTLY must run outside a transaction block.
+-- Create GIN trigram indexes in migration-safe mode.
+-- NOTE: Prisma migrate runs this SQL in a migration transaction, so
+-- CREATE INDEX CONCURRENTLY is not used here.
 
-CREATE INDEX CONCURRENTLY IF NOT EXISTS "problem_title_trgm"
+CREATE INDEX IF NOT EXISTS "problem_title_trgm"
   ON "Problem" USING gin (title gin_trgm_ops);
 
-CREATE INDEX CONCURRENTLY IF NOT EXISTS "problem_statement_trgm"
+CREATE INDEX IF NOT EXISTS "problem_statement_trgm"
   ON "Problem" USING gin (statement gin_trgm_ops);

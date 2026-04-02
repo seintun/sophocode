@@ -246,7 +246,7 @@ Run manually: `bunx prisma db seed`
 
 Wave 3 uses trigram indexes on `Problem.title` and `Problem.statement` for search and recommendation quality.
 
-To avoid long write locks during deploy, those indexes are created in a separate migration with `CREATE INDEX CONCURRENTLY`:
+Those indexes are created in a dedicated migration file using migration-safe SQL (`CREATE INDEX IF NOT EXISTS`):
 
 - `prisma/migrations/202604011700_wave3_trgm_indexes_concurrently/migration.sql`
 

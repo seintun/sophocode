@@ -5,6 +5,7 @@ export function sanitizeForPrompt(value: string): string {
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
+    .replace(/`/g, '&#96;')
     .trim()
     .slice(0, MAX_PROMPT_FIELD_LENGTH);
 }

@@ -10,7 +10,6 @@ export function createSingleTextSseResponse(text: string): Response {
     headers: {
       'Content-Type': 'text/event-stream; charset=utf-8',
       'Cache-Control': 'no-cache, no-transform',
-      Connection: 'keep-alive',
     },
   });
 }
