@@ -46,7 +46,6 @@ const QUESTION_QUERY = `
         code
       }
       hints
-      constraints
       exampleTestcases
     }
   }
@@ -85,12 +84,11 @@ export interface LeetCodeQuestion {
   questionFrontendId: string;
   title: string;
   titleSlug: string;
-  content: string; // HTML
+  content: string | null; // HTML (can be null for locked premium questions)
   difficulty: string;
-  topicTags: LeetCodeTopicTag[];
-  codeSnippets: LeetCodeCodeSnippet[];
-  hints: string[];
-  constraints: string[];
+  topicTags: LeetCodeTopicTag[] | null;
+  codeSnippets: LeetCodeCodeSnippet[] | null;
+  hints: string[] | null;
   exampleTestcases: string;
 }
 
