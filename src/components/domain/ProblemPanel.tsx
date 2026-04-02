@@ -7,7 +7,7 @@ import { useExplanationCache } from '@/hooks/useExplanationCache';
 import { ExplanationLoader } from '@/components/ui/ExplanationLoader';
 import type { SessionMode } from '@/generated/prisma/enums';
 
-type TabKey = 'statement' | 'examples' | 'notes' | 'explanation';
+type TabKey = 'statement' | 'examples' | 'hints' | 'notes' | 'explanation';
 
 interface Example {
   input: string;
@@ -21,6 +21,9 @@ interface ProblemPanelProps {
     statement: string;
     examples: Example[];
     constraints: string[];
+    problemHints?: Array<{ level: number; content: string }>;
+    externalUrl?: string | null;
+    leetcodeNumber?: number | null;
     starterCode?: string;
     pattern: string;
     difficulty: string;
@@ -44,6 +47,14 @@ export function ProblemPanel({
   sessionId,
 }: ProblemPanelProps) {
   const showExplanation = mode !== 'MOCK_INTERVIEW';
+  const staticHints = useMemo(
+    () =>
+      (problem.problemHints ?? [])
+        .filter((hint) => hint.level >= 1 && hint.level <= 3)
+        .sort((a, b) => a.level - b.level),
+    [problem.problemHints],
+  );
+  const showHints = staticHints.length > 0;
   const [activeTab, setActiveTab] = useState<TabKey>('statement');
 
   // Cache key and data
@@ -60,6 +71,7 @@ export function ProblemPanel({
   const tabs: Array<{ key: TabKey; label: string }> = [
     { key: 'statement', label: 'Statement' },
     { key: 'examples', label: 'Examples' },
+    ...(showHints ? [{ key: 'hints' as const, label: 'Hints' }] : []),
     ...(showExplanation ? [{ key: 'explanation' as const, label: 'Explanation' }] : []),
     { key: 'notes', label: 'Notes' },
   ];
@@ -71,6 +83,23 @@ export function ProblemPanel({
         className="border-b border-[var(--color-border)] px-4 py-3 cursor-grab active:cursor-grabbing touch-none select-none"
       >
         <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">{problem.title}</h2>
+        <div className="mt-1 flex flex-wrap items-center gap-3 text-xs">
+          {problem.leetcodeNumber ? (
+            <span className="rounded-full border border-[var(--color-border)] bg-[var(--color-bg-elevated)] px-2 py-0.5 font-semibold text-[var(--color-text-secondary)]">
+              LC #{problem.leetcodeNumber}
+            </span>
+          ) : null}
+          {problem.externalUrl ? (
+            <a
+              href={problem.externalUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-medium text-[var(--color-accent)] hover:underline"
+            >
+              View on LeetCode
+            </a>
+          ) : null}
+        </div>
       </div>
 
       <div
@@ -259,6 +288,32 @@ export function ProblemPanel({
                     />
                   </div>
                 )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Hints */}
+        {showHints && (
+          <div
+            role="tabpanel"
+            id="panel-hints"
+            aria-labelledby="tab-hints"
+            hidden={activeTab !== 'hints'}
+          >
+            {activeTab === 'hints' && (
+              <div className="space-y-3">
+                {staticHints.map((hint, index) => (
+                  <div
+                    key={`${hint.level}-${index}`}
+                    className="rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-primary)] p-3"
+                  >
+                    <p className="mb-1 text-xs font-semibold text-[var(--color-text-muted)]">
+                      Hint {hint.level}
+                    </p>
+                    <p className="text-sm text-[var(--color-text-primary)]">{hint.content}</p>
+                  </div>
+                ))}
               </div>
             )}
           </div>

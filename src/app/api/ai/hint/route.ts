@@ -7,13 +7,10 @@ import { isSessionMode } from '@/lib/sophia';
 import { withRateLimit } from '@/lib/ratelimit';
 import { type NextRequest } from 'next/server';
 import { hintRequestSchema, validateBody } from '@/lib/validations';
+import { prisma } from '@/lib/db/prisma';
 
 async function handler(req: NextRequest): Promise<Response> {
   try {
-    if (!process.env.OPENROUTER_API_KEY) {
-      return new Response('AI features temporarily unavailable', { status: 503 });
-    }
-
     const body = await req.json();
     const validation = validateBody(hintRequestSchema, body);
     if (!validation.success) {
@@ -22,10 +19,24 @@ async function handler(req: NextRequest): Promise<Response> {
         headers: { 'Content-Type': 'application/json' },
       });
     }
-    const { title, statement, pattern, currentCode, testResults, level, mode } = validation.data;
+    const { title, statement, pattern, currentCode, testResults, level, mode, problemId } =
+      validation.data;
 
     // Zod already validates level is 1-3; cast to literal type for buildHintPrompt
     const hintLevel = level as 1 | 2 | 3;
+
+    const staticHint = await prisma.problemHint.findUnique({
+      where: { problemId_level: { problemId, level: hintLevel } },
+    });
+    if (staticHint) {
+      return new Response(staticHint.content, {
+        headers: { 'Content-Type': 'text/plain; charset=utf-8', 'X-Hint-Source': 'static' },
+      });
+    }
+
+    if (!process.env.OPENROUTER_API_KEY) {
+      return new Response('AI features temporarily unavailable', { status: 503 });
+    }
 
     const { system, user } = buildHintPrompt({
       title,

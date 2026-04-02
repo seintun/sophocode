@@ -148,6 +148,7 @@ export async function GET(request: NextRequest): Promise<Response> {
       slug: p.slug,
       difficulty: p.difficulty,
       pattern: p.pattern,
+      leetcodeNumber: p.leetcodeNumber,
       curatedOrder: p.curatedOrder,
       testCaseCount: p._count.testCases,
       mastery: masteryMap[p.id] ?? null,
