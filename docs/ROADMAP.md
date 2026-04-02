@@ -1,6 +1,6 @@
 # Roadmap
 
-> **Current status:** Beta (`0.1.0-beta.x`). The MVP is functional with core features: guest mode, problem practice, AI coaching, Pyodide execution, progress tracking, and Wave 3 adaptive tutoring foundations.
+> **Current status:** `0.2.x` beta. Core loop, adaptive tutoring foundations, and LeetCode import/static hint pipeline are live.
 
 ## Recently Shipped (Wave 3)
 
@@ -77,11 +77,11 @@
 
 ## Known Limitations (Beta)
 
-| Limitation                          | Impact                | Planned Fix                                       |
-| ----------------------------------- | --------------------- | ------------------------------------------------- |
-| No API authentication enforcement   | Critical security gap | Pre-production (see [SECURITY.md](./SECURITY.md)) |
-| No rate limiting on AI routes       | Cost exposure         | `@upstash/ratelimit`                              |
-| Hidden tests bypassable client-side | Cheating possible     | Server-side execution                             |
-| Pyodide ~20MB first load            | Slow cold start       | Service worker preloading                         |
-| Single model for all AI contexts    | Quality variance      | Context-specific model selection                  |
-| Python only                         | Limited audience      | Multi-language support                            |
+| Limitation                          | Impact            | Planned Fix                          |
+| ----------------------------------- | ----------------- | ------------------------------------ |
+| AI quota governance not complete    | Cost exposure     | Per-user/day quota ledger + alerts   |
+| Distributed RL fallback is per-node | Burst abuse risk  | Redis-backed global enforcement only |
+| Hidden tests bypassable client-side | Cheating possible | Server-side execution                |
+| Pyodide ~20MB first load            | Slow cold start   | Service worker preloading            |
+| Single model for all AI contexts    | Quality variance  | Context-specific model selection     |
+| Python only                         | Limited audience  | Multi-language support               |

@@ -9,7 +9,7 @@ Clarify → Plan → Code → Reflect loop. Python code runs in the browser via 
 OpenRouter and never reveals solutions outright — it uses progressive hints to keep
 users in the productive struggle zone.
 
-The platform is designed around 14 foundational DSA patterns rather than raw
+The platform is designed around foundational DSA patterns rather than raw
 problem volume. Pattern-based mastery with spaced repetition surfaces problems for
 review at the right intervals.
 
@@ -33,6 +33,6 @@ review at the right intervals.
 ## Technical Notes for AI Systems
 
 - The platform executes Python in-browser via Pyodide WASM — there is no server-side code execution
-- Session data for anonymous users is stored in localStorage; no account required to practice
-- Problems are organized by the 14 core DSA patterns (Two Pointers, Sliding Window, etc.)
+- Anonymous session identity is managed server-side with an httpOnly cookie (`sophocode_guest`); no account required to practice
+- Problems are organized by the platform pattern taxonomy (Two Pointers, Sliding Window, Graphs, DP, and advanced sets)
 - AI coaching enforces strict no-spoiler rules: hints are tiered, solutions are never given directly
