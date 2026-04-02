@@ -6,9 +6,32 @@ import type { Metadata } from 'next';
 import { getPostBySlug, getAllPosts } from '@/lib/content';
 
 const DEFAULT_SLUG = 'getting-started';
+const DOC_ORDER = [
+  'getting-started',
+  'practice-workspace-guide',
+  'session-modes-explained',
+  'hints-policy-and-best-use',
+  'progress-and-mastery-guide',
+  'roadmap-guide',
+  'pattern-taxonomy-reference',
+  'common-mistakes-and-how-to-fix',
+  'account-guest-and-data-linking',
+  'troubleshooting',
+];
+
+function sortDocsByImportance<T extends { slug: string }>(docs: T[]): T[] {
+  return [...docs].sort((a, b) => {
+    const ai = DOC_ORDER.indexOf(a.slug);
+    const bi = DOC_ORDER.indexOf(b.slug);
+    const aRank = ai === -1 ? Number.MAX_SAFE_INTEGER : ai;
+    const bRank = bi === -1 ? Number.MAX_SAFE_INTEGER : bi;
+    if (aRank !== bRank) return aRank - bRank;
+    return a.slug.localeCompare(b.slug);
+  });
+}
 
 export async function generateStaticParams() {
-  const docs = getAllPosts('docs');
+  const docs = sortDocsByImportance(getAllPosts('docs'));
   return [{ slug: [] }, ...docs.map((doc) => ({ slug: [doc.slug] }))];
 }
 
@@ -47,7 +70,7 @@ export default async function DocsPage({ params }: { params: Promise<{ slug?: st
 
   if (!doc) notFound();
 
-  const allDocs = getAllPosts('docs');
+  const allDocs = sortDocsByImportance(getAllPosts('docs'));
   const currentIndex = allDocs.findIndex((d) => d.slug === docSlug);
   const prevDoc = currentIndex > 0 ? allDocs[currentIndex - 1] : null;
   const nextDoc =
@@ -125,7 +148,8 @@ export default async function DocsPage({ params }: { params: Promise<{ slug?: st
             {prevDoc ? (
               <Link
                 href={`/docs/${prevDoc.slug}`}
-                className="rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-secondary)] p-3 text-[var(--color-text-secondary)] transition-colors hover:text-[var(--color-text-primary)]"
+                scroll
+                className="no-underline rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-secondary)] p-3 text-[var(--color-text-secondary)] transition-colors hover:text-[var(--color-text-primary)]"
               >
                 <span className="mb-1 block text-xs uppercase tracking-wide text-[var(--color-text-muted)]">
                   Previous
@@ -138,7 +162,8 @@ export default async function DocsPage({ params }: { params: Promise<{ slug?: st
             {nextDoc ? (
               <Link
                 href={`/docs/${nextDoc.slug}`}
-                className="rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-secondary)] p-3 text-[var(--color-text-secondary)] transition-colors hover:text-[var(--color-text-primary)]"
+                scroll
+                className="no-underline rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-secondary)] p-3 text-[var(--color-text-secondary)] transition-colors hover:text-[var(--color-text-primary)]"
               >
                 <span className="mb-1 block text-xs uppercase tracking-wide text-[var(--color-text-muted)]">
                   Next
