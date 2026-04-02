@@ -5,7 +5,7 @@
 ## Architecture
 
 - Next.js 16 App Router, React 19, TypeScript, Tailwind v4, Prisma 7 (Supabase Postgres)
-- Guest-first anonymous sessions (localStorage guestId), auth added later
+- Guest-first anonymous sessions (httpOnly `sophocode_guest` cookie via proxy), auth added later
 - Pyodide WASM for browser-side Python execution
 - Vercel AI SDK streaming over OpenRouter for AI coaching
 - Three-panel session: problem | editor | coaching chat
