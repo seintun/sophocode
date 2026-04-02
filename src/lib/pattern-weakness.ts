@@ -20,7 +20,7 @@ export async function updatePatternWeakness(params: {
   const { guestId, pattern, outcome } = params;
 
   try {
-    const isSuccess = outcome === 'SOLVED_ZERO_HINTS';
+    const isSuccess = outcome === 'SOLVED_ZERO_HINTS' || outcome === 'SOLVED_WITH_HINTS';
     const failedIncrement = outcome === 'ATTEMPTED' ? 1 : 0;
     const successIncrement = isSuccess ? 1 : 0;
     const now = new Date();
