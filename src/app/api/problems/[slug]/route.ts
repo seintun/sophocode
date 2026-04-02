@@ -16,6 +16,9 @@ export async function GET(
           where: { isHidden: false },
           orderBy: { order: 'asc' },
         },
+        problemHints: {
+          orderBy: { level: 'asc' },
+        },
       },
     });
 

@@ -26,6 +26,15 @@ async function getHandler(
             starterCode: true,
             difficulty: true,
             pattern: true,
+            leetcodeNumber: true,
+            externalUrl: true,
+            problemHints: {
+              select: {
+                level: true,
+                content: true,
+              },
+              orderBy: { level: 'asc' },
+            },
             testCases: {
               select: {
                 id: true,
