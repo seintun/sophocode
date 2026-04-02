@@ -1,6 +1,7 @@
 #!/usr/bin/env bun
 
 import { PrismaClient } from '@/generated/prisma/client';
+import type { Prisma } from '@/generated/prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { fetchLeetCodeProblem, fetchLeetCodeSlugByFrontendId } from '../src/lib/leetcode/graphql';
 import {
@@ -84,7 +85,7 @@ async function fetchNeetCode150Slugs(listUrl: string): Promise<string[]> {
   return Array.from(slugs);
 }
 
-async function importProblemBySlug(resolvedSlug: string): Promise<void> {
+async function importProblemBySlug(resolvedSlug: string, curatedOrder?: number): Promise<void> {
   console.log(`Fetching LeetCode problem: ${resolvedSlug}...`);
 
   const question = await fetchLeetCodeProblem(resolvedSlug);
@@ -103,86 +104,86 @@ async function importProblemBySlug(resolvedSlug: string): Promise<void> {
   const statement = extractStatement(content);
   const constraints = extractConstraints(content);
   const starterCode = getPythonStarterCode(codeSnippets);
-  const leetcodeNumber = parseInt(question.questionFrontendId, 10);
+  const parsedFrontendId = Number.parseInt(question.questionFrontendId, 10);
+  const leetcodeNumber = Number.isFinite(parsedFrontendId) ? parsedFrontendId : null;
   const externalUrl = buildExternalUrl(resolvedSlug);
 
-  // Upsert problem
-  const problem = await prisma.problem.upsert({
-    where: { slug: resolvedSlug },
-    create: {
-      title: question.title,
-      slug: resolvedSlug,
-      difficulty,
-      pattern,
-      tags: topicTags.map((t) => t.name),
-      constraints,
-      sourceType: 'EXTERNAL',
-      leetcodeNumber,
-      externalUrl,
-      statement,
-      examples: examples as any,
-      starterCode,
-      isCurated: true,
-    },
-    update: {
-      title: question.title,
-      difficulty,
-      pattern,
-      tags: topicTags.map((t) => t.name),
-      constraints,
-      leetcodeNumber,
-      externalUrl,
-      statement,
-      examples: examples as any,
-      starterCode,
-      isCurated: true,
-    },
-  });
-
-  console.log(`  ✓ Problem upserted: ${problem.id}`);
-
-  // Upsert visible test cases from examples
-  for (let i = 0; i < examples.length; i++) {
-    const example = examples[i];
-    const existing = await prisma.testCase.findFirst({
-      where: { problemId: problem.id, order: i + 1 },
+  const problem = await prisma.$transaction(async (tx) => {
+    // Upsert problem
+    const upserted = await tx.problem.upsert({
+      where: { slug: resolvedSlug },
+      create: {
+        title: question.title,
+        slug: resolvedSlug,
+        difficulty,
+        pattern,
+        tags: topicTags.map((t) => t.name),
+        constraints,
+        sourceType: 'EXTERNAL',
+        leetcodeNumber,
+        externalUrl,
+        statement,
+        examples: examples as unknown as Prisma.InputJsonValue,
+        starterCode,
+        isCurated: true,
+        curatedOrder,
+      },
+      update: {
+        title: question.title,
+        difficulty,
+        pattern,
+        tags: topicTags.map((t) => t.name),
+        constraints,
+        leetcodeNumber,
+        externalUrl,
+        statement,
+        examples: examples as unknown as Prisma.InputJsonValue,
+        starterCode,
+        isCurated: true,
+        curatedOrder,
+      },
     });
 
-    if (existing) {
-      await prisma.testCase.update({
-        where: { id: existing.id },
-        data: { input: example.input, expected: example.output },
-      });
-    } else {
-      await prisma.testCase.create({
-        data: {
-          problemId: problem.id,
+    console.log(`  ✓ Problem upserted: ${problem.id}`);
+
+    // Replace visible test cases from examples in bulk.
+    await tx.testCase.deleteMany({
+      where: { problemId: upserted.id, isHidden: false },
+    });
+    if (examples.length > 0) {
+      await tx.testCase.createMany({
+        data: examples.map((example, index) => ({
+          problemId: upserted.id,
           input: example.input,
           expected: example.output,
           isHidden: false,
-          order: i + 1,
-        },
+          order: index + 1,
+        })),
       });
     }
-  }
-  console.log(`  ✓ ${examples.length} test cases upserted`);
+    console.log(`  ✓ ${examples.length} test cases upserted`);
 
-  // Upsert problem hints
-  for (let i = 0; i < hints.length && i < 3; i++) {
-    await prisma.problemHint.upsert({
-      where: { problemId_level: { problemId: problem.id, level: i + 1 } },
-      create: {
-        problemId: problem.id,
-        level: i + 1,
-        content: hints[i],
-        source: 'leetcode',
-      },
-      update: {
-        content: hints[i],
-      },
+    // Replace top 3 LeetCode hints to avoid stale rows.
+    const topHints = hints.slice(0, 3);
+    await tx.problemHint.deleteMany({
+      where: { problemId: upserted.id, source: 'leetcode' },
     });
-  }
-  console.log(`  ✓ ${Math.min(hints.length, 3)} hints upserted`);
+    if (topHints.length > 0) {
+      await tx.problemHint.createMany({
+        data: topHints.map((content, index) => ({
+          problemId: upserted.id,
+          level: index + 1,
+          content,
+          source: 'leetcode',
+        })),
+      });
+    }
+
+    return upserted;
+  });
+
+  const topHints = hints.slice(0, 3);
+  console.log(`  ✓ ${topHints.length} hints upserted`);
 
   console.log(`Done! Imported: ${question.title} (LC #${leetcodeNumber})`);
 }
@@ -221,11 +222,7 @@ async function main() {
       const currentSlug = slugs[i];
       console.log(`\n[${i + 1}/${slugs.length}] ${currentSlug}`);
       try {
-        await importProblemBySlug(currentSlug);
-        await prisma.problem.update({
-          where: { slug: currentSlug },
-          data: { curatedOrder: i + 1 },
-        });
+        await importProblemBySlug(currentSlug, i + 1);
         succeeded++;
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Unknown error';

@@ -12,6 +12,11 @@ import JsonLdSchema from '@/components/seo/JsonLdSchema';
 import { SOPHIA_MODES } from '@/lib/sophia';
 import { useCodeExecution } from '@/hooks/useCodeExecution';
 import { SessionContinuationCard } from '@/components/domain/SessionContinuationCard';
+import {
+  decodeHtmlEntities,
+  formatExampleExplanation,
+  stripTrailingSections,
+} from '@/lib/problem-content/formatting';
 
 interface ProblemDetail {
   id: string;
@@ -76,43 +81,6 @@ function formatPattern(pattern: string): string {
     .replace(/_/g, ' ')
     .toLowerCase()
     .replace(/\b\w/g, (c: string) => c.toUpperCase());
-}
-
-function decodeHtmlEntities(value: string): string {
-  let text = value;
-  for (let i = 0; i < 2; i++) {
-    const next = text
-      .replace(/&lt;/g, '<')
-      .replace(/&gt;/g, '>')
-      .replace(/&amp;/g, '&')
-      .replace(/&quot;/g, '"')
-      .replace(/&#39;/g, "'")
-      .replace(/&nbsp;/g, ' ');
-    if (next === text) break;
-    text = next;
-  }
-  return text;
-}
-
-function stripTrailingSections(value: string): string {
-  return value.split(/\b(?:Constraints|Follow-up|Note)\s*:/i)[0].trim();
-}
-
-function formatExampleExplanation(value: string): string {
-  const decoded = decodeHtmlEntities(value).trim();
-  const cleaned = stripTrailingSections(decoded);
-  const normalizeArrow = (text: string) => text.replace(/\s*-->\s*/g, ' -> ').trim();
-  const arrowSteps = Array.from(
-    cleaned.matchAll(/(\d+\s*-->\s*[^\n;]+?)(?=\s+\d+\s*-->|;|$)/g),
-  ).map((match) => normalizeArrow(match[1]).replace(/->/g, '→'));
-
-  if (arrowSteps.length > 1) {
-    return arrowSteps.join('\n');
-  }
-
-  return normalizeArrow(cleaned)
-    .replace(/\s*;\s*/g, '\n')
-    .replace(/->/g, '→');
 }
 
 interface ProblemDetailClientProps {

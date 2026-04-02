@@ -318,8 +318,9 @@ async function main(): Promise<void> {
   const prisma = createPrismaClient();
 
   try {
-    for (const { index, data } of records) {
-      const order = index + 1;
+    for (let recordIndex = 0; recordIndex < records.length; recordIndex++) {
+      const { data } = records[recordIndex];
+      const order = recordIndex + 1;
       const existing = await prisma.problem.findUnique({
         where: { slug: data.slug },
         select: { id: true },

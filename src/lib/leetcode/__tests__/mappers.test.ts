@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { extractExamples, extractStatement } from '../mappers';
+import { extractConstraints, extractExamples, extractStatement } from '../mappers';
 
 describe('extractStatement', () => {
   it('removes example and constraints sections from statement markdown', () => {
@@ -50,5 +50,23 @@ describe('extractExamples', () => {
     expect(example.explanation).toContain('-->');
     expect(example.explanation).not.toContain('Constraints');
     expect(example.explanation).not.toContain('Follow-up');
+  });
+});
+
+describe('extractConstraints', () => {
+  it('extracts only constraint list items when heading has attributes', () => {
+    const html = `
+      <p>Description</p>
+      <ul><li>example bullet that should not be included</li></ul>
+      <strong class="example">Example 1:</strong>
+      <pre><strong>Input:</strong> n = 2\n<strong>Output:</strong> 2</pre>
+      <strong class="constraints">Constraints:</strong>
+      <ul>
+        <li>1 &lt;= n &lt;= 100</li>
+        <li>n is odd.</li>
+      </ul>
+    `;
+
+    expect(extractConstraints(html)).toEqual(['1 <= n <= 100', 'n is odd.']);
   });
 });
